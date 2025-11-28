@@ -1,0 +1,48 @@
+{
+  "pca9685": {
+    "address": 64,
+    "frequency": 50
+  },
+  "power": {
+    "enable_gpio": null,
+    "active_level_high": true
+  },
+  "servos": {
+    "pouce_articulation": {
+      "channel": 4,
+      "neutral": 0.350,
+      "dir_close": 1,
+      "speed_close": 0.5,
+      "speed_open": 0.5,
+      "t_close": 0.820,
+      "t_open": 0.39
+    },
+    "index": {
+      "channel": 2,
+      "neutral": 0.350,
+      "dir_close": -1,
+      "speed_close": 0.5,
+      "speed_open": 0.5,
+      "t_close": 0.850,
+      "t_open": 0.72
+    },
+    "majeur": {
+      "channel": 0,
+      "neutral": 0.350,
+      "dir_close": -1,
+      "speed_close": 0.5,
+      "speed_open": 0.5,
+      "t_close": 0.82,
+      "t_open": 0.75
+    },
+    "annulaire_auriculaire": {
+      "channel": 1,
+      "neutral": 0.350,
+      "dir_close": 1,
+      "speed_close": 0.5,
+      "speed_open": 0.5,
+      "t_close": 0.86,
+      "t_open": 0.450
+    }
+  }
+}
