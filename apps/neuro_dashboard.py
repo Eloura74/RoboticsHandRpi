@@ -59,7 +59,7 @@ def get_local_ip():
 LOCAL_IP = get_local_ip()
 
 # --------------------------------------------------------------------
-# 3. GESTION ÉTAT & THREADS
+# 3. GESTION ÉTAT & SÉCURITÉ
 # --------------------------------------------------------------------
 def kill_port_hog(port):
     pass
@@ -73,6 +73,21 @@ state = {
     'packet_count': 0,
     'simu_mode': False
 }
+
+# --- GESTIONNAIRE D'ARRÊT PROPRE (CTRL+C) ---
+def signal_handler(signum, frame):
+    print("\n[SYSTEM] Interruption reçue (Ctrl+C). Mise en sécurité...")
+    try:
+        if controller:
+            print("[SYSTEM] Ouverture main de sécurité...")
+            controller.open_hand()
+            time.sleep(0.5) # Laisser le temps aux servos
+    except: pass
+    
+    print("[SYSTEM] Arrêt du serveur.")
+    # On force la fermeture de l'app et du process
+    app.shutdown()
+    sys.exit(0)
 
 # --- THREAD RÉCEPTION (UDP PARTAGÉ) ---
 def receiver_thread():
@@ -148,104 +163,119 @@ def hardware_thread(ctrl):
         time.sleep(0.05)
 
 # --------------------------------------------------------------------
-# 4. RESSOURCES GRAPHIQUES (V12 - CINÉMATIQUE CORRIGÉE)
+# 4. RESSOURCES GRAPHIQUES (V16 - MECHANICAL THUMB)
 # --------------------------------------------------------------------
 
-# PARTIE 1 : STRUCTURE SVG
-# Note: Thumb is on LEFT (Translate X < 0) for a Left Hand Palm View or Right Hand Back View.
-# Adjusted translations to spread fingers naturally.
 HAND_SVG_STRUCTURE = r'''
 <div style="width:100%; height:100%; position:relative; display:flex; justify-content:center; align-items:center; overflow:hidden;">
     
-    <svg style="position:absolute; width:100%; height:100%; opacity:0.1; pointer-events:none;">
-        <defs><pattern id="g" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 L0 0 0 40" fill="none" stroke="#00f3ff" stroke-width="0.5"/></pattern></defs>
-        <rect width="100%" height="100%" fill="url(#g)" />
+    <!-- Fond Tech -->
+    <svg style="position:absolute; width:100%; height:100%; pointer-events:none;">
+        <defs>
+            <radialGradient id="bg-grad" cx="0.5" cy="0.5" r="0.8">
+                <stop offset="0%" stop-color="#1a2333" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#080a10" stop-opacity="1"/>
+            </radialGradient>
+            <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                <path d="M50 0 L0 0 0 50" fill="none" stroke="#00f3ff" stroke-width="0.2" opacity="0.3"/>
+            </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#bg-grad)" />
+        <rect width="100%" height="100%" fill="url(#grid)" />
     </svg>
 
-    <div id="js-heartbeat" style="position:absolute; top:10px; right:10px; width:8px; height:8px; border-radius:50%; background:#333; z-index:100;"></div>
+    <div id="js-heartbeat" style="position:absolute; top:15px; right:15px; width:6px; height:6px; background:#00ff00; border-radius:50%; box-shadow:0 0 8px #00ff00;"></div>
 
-    <!-- MAIN ROBOTIQUE (Vue de Face) -->
-    <svg id="robot-hand" viewBox="-200 -450 400 500" style="height:95%; width:auto; z-index:10; filter:drop-shadow(0 10px 20px rgba(0,0,0,0.8));">
+    <!-- ROBOT HAND (Vue Face/Paume) -->
+    <svg id="robot-hand" viewBox="-250 -500 500 600" style="height:95%; width:auto; z-index:10; filter:drop-shadow(0 20px 30px rgba(0,0,0,0.9));">
         <defs>
-            <linearGradient id="pla-grey" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="50%" stop-color="#808080"/><stop offset="100%" stop-color="#3a3a3a"/></linearGradient>
-            <linearGradient id="tendon-glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00f3ff" stop-opacity="0"/><stop offset="100%" stop-color="#00f3ff" stop-opacity="0.8"/></linearGradient>
+            <linearGradient id="pla-base" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0%" stop-color="#2a2a2a"/>
+                <stop offset="20%" stop-color="#4a4a4a"/>
+                <stop offset="50%" stop-color="#606060"/>
+                <stop offset="80%" stop-color="#4a4a4a"/>
+                <stop offset="100%" stop-color="#2a2a2a"/>
+            </linearGradient>
+            <linearGradient id="metal-dark" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#111"/>
+                <stop offset="100%" stop-color="#333"/>
+            </linearGradient>
         </defs>
 
-        <!-- Poignet / Avant-bras -->
-        <g transform="translate(0, 50)">
-            <path d="M-60,0 L-50,-80 L50,-80 L60,0 L60,100 L-60,100 Z" fill="#222" stroke="#111" stroke-width="2"/>
-            <!-- Servo Thumb Base -->
-            <rect x="-80" y="-70" width="40" height="60" rx="5" fill="#111" stroke="#333" />
+        <!-- AVANT-BRAS -->
+        <g transform="translate(0, 80)">
+            <path d="M-70,0 L-60,-100 L60,-100 L70,0 L70,120 L-70,120 Z" fill="#1a1a1a" stroke="#000" stroke-width="2"/>
+            <rect x="-50" y="-80" width="100" height="60" rx="4" fill="#0f0f0f" stroke="#333"/>
         </g>
 
-        <!-- Paume -->
-        <path d="M-55,-30 L-70,-130 L-45,-180 L45,-180 L70,-130 L55,-30 Z" fill="url(#pla-grey)" stroke="#222" stroke-width="2" />
-        
-        <!-- Decoration Paume -->
-        <path d="M-40,-40 L-50,-120 L40,-40" fill="none" stroke="#222" stroke-width="1" opacity="0.5"/>
+        <!-- PAUME -->
+        <g transform="translate(0, -20)">
+            <path d="M-60,-10 L-75,-140 L-50,-200 L50,-200 L75,-140 L60,-10 Z" fill="url(#metal-dark)" stroke="#555" stroke-width="2"/>
+            
+            <!-- Servo Pouce (Le moteur fixe) -->
+            <g transform="translate(-65, -50) rotate(0)">
+                <rect x="-25" y="-30" width="50" height="40" rx="2" fill="#111" stroke="#444"/>
+                <rect x="-20" y="-25" width="40" height="15" fill="#600" opacity="0.6"/>
+                <!-- Axe Servo -->
+                <circle cx="0" cy="-20" r="4" fill="#888"/>
+            </g>
+        </g>
 
-        <!-- DOIGTS (Placement en éventail) -->
-        <!-- Pouce (Gauche) -->
-        <g id="grp-pouce" transform="translate(-75, -90) rotate(-30)"></g>
-        
-        <!-- Index -->
-        <g id="grp-index" transform="translate(-45, -180) rotate(-5)"></g>
-        
-        <!-- Majeur -->
-        <g id="grp-majeur" transform="translate(0, -185)"></g>
-        
-        <!-- Annulaire -->
-        <g id="grp-annulaire" transform="translate(50, -175) rotate(5)"></g>
+        <!-- DOIGTS -->
+        <g id="grp-pouce" transform="translate(-65, -70)"></g>
+        <g id="grp-index" transform="translate(-55, -200) rotate(-8)"></g>
+        <g id="grp-majeur" transform="translate(0, -210)"></g>
+        <g id="grp-annulaire" transform="translate(55, -200) rotate(8)"></g>
+        <g id="grp-auriculaire" transform="translate(95, -160) rotate(20)"></g>
     </svg>
 </div>
 '''
 
-# PARTIE 2 : JS (Cinématique Realiste 2D)
 HAND_ANIMATION_JS = r'''
 <script>
 (function() {
-    const fingers = ['pouce', 'index', 'majeur', 'annulaire'];
-    const fingerMap = {
-        'pouce_articulation': 'pouce', 'index': 'index', 
-        'majeur': 'majeur', 'annulaire_auriculaire': 'annulaire'
-    };
-    
-    // Valeurs cibles (0=ouvert, 1=fermé)
-    let targets = { pouce: 0, index: 0, majeur: 0, annulaire: 0 };
-    let currents = { pouce: 0, index: 0, majeur: 0, annulaire: 0 };
+    const fingers = ['pouce', 'index', 'majeur', 'annulaire', 'auriculaire'];
+    let targets = { pouce: 0, index: 0, majeur: 0, annulaire: 0, auriculaire: 0 };
+    let currents = { pouce: 0, index: 0, majeur: 0, annulaire: 0, auriculaire: 0 };
     let hbState = false;
 
-    function createFingerDOM(id, isThumb) {
+    function createFingerDOM(id, isThumb, isPinky) {
         const g = document.getElementById('grp-' + id);
         if(!g) return;
         
-        // Dimensions adaptées aux phalanges imprimées 3D
-        // P1 (Base), P2 (Milieu), P3 (Bout)
-        // Les phalanges se dessinent vers le HAUT (Y négatif)
+        let scale = 1.0;
+        if(isPinky) scale = 0.85;
+        if(isThumb) scale = 1.1;
+
+        const w = 26 * scale; 
+        const h1 = 65 * scale;
+        const h2 = 50 * scale;
+        const h3 = 40 * scale;
         
-        const w = isThumb ? 28 : 24; 
-        const h1 = isThumb ? 50 : 60;
-        const h2 = isThumb ? 40 : 50;
-        const h3 = isThumb ? 35 : 40;
+        g.dataset.h1 = h1;
+        g.dataset.h2 = h2;
         
+        let p1Content = `<path d="M${-w/2},0 L${-w/2},${-h1} L${w/2},${-h1} L${w/2},0 Z" fill="url(#pla-base)" stroke="#111" stroke-width="1"/>`;
+        if(isThumb) {
+             p1Content = `
+                <path d="M${-w/2-8},0 L${-w/2},${-h1} L${w/2},${-h1} L${w/2+2},0 L${-w/2-8},0 Z" fill="url(#pla-base)" stroke="#111" stroke-width="1"/>
+                <rect x="${-w/2}" y="-10" width="${w}" height="10" fill="#333" opacity="0.3"/>
+             `;
+        }
+
         let html = `
-        <!-- Tendon Visual -->
-        <line x1="0" y1="0" x2="0" y2="-150" stroke="url(#tendon-glow)" stroke-width="2" opacity="0" class="tendon-fx" />
-        
-        <!-- P1 -->
-        <g class="p1">
-            <rect x="${-w/2}" y="${-h1}" width="${w}" height="${h1}" rx="4" fill="url(#pla-grey)" stroke="#222" />
-            <circle cx="0" cy="${-h1+10}" r="2" fill="#111" opacity="0.5"/>
-            
-            <!-- P2 -->
-            <g class="p2" transform="translate(0, ${-h1})">
-                <circle cx="0" cy="0" r="${w/2 - 2}" fill="#333" />
-                <rect x="${-w/2+2}" y="${-h2}" width="${w-4}" height="${h2}" rx="3" fill="url(#pla-grey)" stroke="#222" />
-                
-                <!-- P3 -->
-                <g class="p3" transform="translate(0, ${-h2})">
-                    <circle cx="0" cy="0" r="${w/2 - 4}" fill="#333" />
-                    <path d="M${-w/2+4},0 L${-w/2+4},${-h3+10} Q0,${-h3} ${w/2-4},${-h3+10} L${w/2-4},0 Z" fill="url(#pla-grey)" stroke="#222" />
+        <g class="finger-scale">
+            <line x1="0" y1="0" x2="0" y2="${-h1*3}" stroke="#00f3ff" stroke-width="1.5" opacity="0.4" class="tendon-fx"/>
+            <g class="p1">
+                ${p1Content}
+                <circle cx="0" cy="${-h1+8}" r="3" fill="#222"/> 
+                <g class="p2" transform="translate(0, ${-h1})">
+                    <path d="M${-w/2+2},0 L${-w/2+2},${-h2} L${w/2-2},${-h2} L${w/2-2},0 Z" fill="url(#pla-base)" stroke="#111" stroke-width="1"/>
+                    <circle cx="0" cy="${-h2+6}" r="2.5" fill="#222"/>
+                    <g class="p3" transform="translate(0, ${-h2})">
+                        <path d="M${-w/2+3},0 L${-w/2+3},${-h3+10} L0,${-h3} L${w/2-3},${-h3+10} L${w/2-3},0 Z" fill="url(#pla-base)" stroke="#111" stroke-width="1"/>
+                        <path d="M${-5},${-15} L0,${-25} L${5},${-15} L${5},${-5} L${-5},${-5} Z" fill="#222" opacity="0.6"/>
+                    </g>
                 </g>
             </g>
         </g>`;
@@ -255,16 +285,19 @@ HAND_ANIMATION_JS = r'''
     window.updateHandData = function(jsonStr) {
         try {
             const data = JSON.parse(jsonStr);
-            for(const [key, val] of Object.entries(data)) {
-                if(fingerMap[key]) targets[fingerMap[key]] = val;
+            if(data['pouce_articulation'] !== undefined) targets.pouce = data['pouce_articulation'];
+            if(data['index'] !== undefined) targets.index = data['index'];
+            if(data['majeur'] !== undefined) targets.majeur = data['majeur'];
+            if(data['annulaire_auriculaire'] !== undefined) {
+                targets.annulaire = data['annulaire_auriculaire'];
+                targets.auriculaire = data['annulaire_auriculaire'];
             }
         } catch(e) {}
     };
 
     function animate() {
-        const alpha = 0.2; // Vitesse de lissage
+        const alpha = 0.20; 
         
-        // Clignotement LED verte si actif
         const hb = document.getElementById('js-heartbeat');
         if(hb) {
             hbState = !hbState;
@@ -272,7 +305,6 @@ HAND_ANIMATION_JS = r'''
         }
 
         fingers.forEach(f => {
-            // Interpolation
             let diff = targets[f] - currents[f];
             if(Math.abs(diff) < 0.001) currents[f] = targets[f];
             else currents[f] += diff * alpha;
@@ -280,57 +312,47 @@ HAND_ANIMATION_JS = r'''
             const val = currents[f];
             const g = document.getElementById('grp-' + f);
             if(!g) return;
-            
-            // Effet visuel du tendon qui se tend
+
+            const h1 = parseFloat(g.dataset.h1);
+            const h2 = parseFloat(g.dataset.h2);
+
             const tendon = g.querySelector('.tendon-fx');
-            if(tendon) tendon.style.opacity = val * 0.8;
+            if(tendon) tendon.style.opacity = 0.3 + (val * 0.7);
 
             const p1 = g.querySelector('.p1');
             const p2 = g.querySelector('.p2');
             const p3 = g.querySelector('.p3');
 
             if(f === 'pouce') {
-                // CINEMATIQUE POUCE (Rotation 2D vers la paume)
-                // Le pouce tourne à sa base pour "entrer" dans la main
-                const rotBase = val * 90; // 0 -> 90 degrés (fermeture)
-                const rotP2 = val * 40;
-                const rotP3 = val * 60;
+                const startAngle = -85; 
+                const endAngle = 10;
+                const rotBase = startAngle + (val * (endAngle - startAngle));
+                
+                const rotP2 = val * 40; 
+                const rotP3 = val * 50;
                 
                 if(p1) p1.setAttribute('transform', `rotate(${rotBase})`);
-                if(p2) p2.setAttribute('transform', `translate(0, -50) rotate(${rotP2})`);
-                if(p3) p3.setAttribute('transform', `translate(0, -40) rotate(${rotP3})`);
-                
+                if(p2) p2.setAttribute('transform', `translate(0, ${-h1}) rotate(${rotP2})`);
+                if(p3) p3.setAttribute('transform', `translate(0, ${-h2}) rotate(${rotP3})`);
             } else {
-                // CINEMATIQUE DOIGTS (Foreshortening / Raccourcissement visuel)
-                // Pour simuler un doigt qui se plie VERS la caméra en 2D, on réduit sa hauteur (Scale Y)
-                // et on décale légèrement Y pour simuler l'enroulement.
-                
-                // P1: Reste fixe mais bascule un peu vers l'avant (Scale Y 90%)
-                const s1 = 1.0 - (val * 0.1);
-                
-                // P2: Se plie beaucoup (Scale Y diminue -> effet de perspective) + Rotation légère pour courber
-                const s2 = 1.0 - (val * 0.4); 
-                const r2 = val * 10; // Légère courbure naturelle
-                
-                // P3: Le bout se replie (Scale Y diminue fort) + Rotation pour "rentrer"
-                const s3 = 1.0 - (val * 0.5);
-                const r3 = val * 20;
+                const s1 = 1.0 - (val * 0.15);
+                const s2 = 1.0 - (val * 0.45);
+                const r2 = val * 15;
+                const s3 = 1.0 - (val * 0.60);
+                const r3 = val * 30;
 
-                // Application
                 if(p1) p1.setAttribute('transform', `scale(1, ${s1})`);
-                if(p2) p2.setAttribute('transform', `translate(0, -60) rotate(${r2}) scale(1, ${s2})`);
-                if(p3) p3.setAttribute('transform', `translate(0, -50) rotate(${r3}) scale(1, ${s3})`);
+                if(p2) p2.setAttribute('transform', `translate(0, ${-h1}) rotate(${r2}) scale(1, ${s2})`);
+                if(p3) p3.setAttribute('transform', `translate(0, ${-h2}) rotate(${r3}) scale(1, ${s3})`);
             }
         });
-        
         requestAnimationFrame(animate);
     }
 
     function init() {
         if(document.getElementById('robot-hand')) {
-            fingers.forEach(f => createFingerDOM(f, f==='pouce'));
+            fingers.forEach(f => createFingerDOM(f, f==='pouce', f==='auriculaire'));
             animate();
-            console.log("V12 Engine Running");
         } else {
             setTimeout(init, 50);
         }
@@ -350,33 +372,44 @@ def build_ui():
         body { background: #080a10; color: #e0e0e0; font-family: 'Orbitron', sans-serif; overflow: hidden; }
         .pip-cam { border: 2px solid #00f3ff; box-shadow: 0 0 15px rgba(0, 243, 255, 0.3); }
         .panel { background: rgba(20, 25, 35, 0.95); border: 1px solid #334455; }
+        .blinking-btn { animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
     </style>
     ''')
+
+    # --- FONCTION D'ARRET D'URGENCE ---
+    def emergency_stop():
+        # 1. Reset Logiciel
+        with state_lock:
+            state['simu_mode'] = False
+            for f in FINGERS:
+                state['values'][f] = 0.0 # Force 0 dans le state
+        
+        # 2. Reset Physique
+        if controller:
+            controller.open_hand()
+        
+        # 3. Notification UI
+        ui.notify("ARRÊT D'URGENCE ACTIVÉ - MAIN OUVERTE", type='negative', close_button=True)
 
     with ui.row().classes('w-full h-[6vh] items-center justify-between px-4 bg-[#05070a] border-b border-[#334455]'):
         with ui.row().classes('items-center gap-2'):
             ui.icon('fingerprint', color='cyan-400').classes('text-xl')
-            ui.label('NEURO-LINK // V12 CINEMATICS').classes('text-xl font-bold tracking-widest text-gray-200')
+            ui.label('NEURO-LINK // V17 SAFETY').classes('text-xl font-bold tracking-widest text-gray-200')
         with ui.row().classes('items-center gap-4'):
             ui.label(f'HOST: {LOCAL_IP}').classes('text-xs font-mono text-gray-500')
             status = ui.label('INIT').classes('text-xs px-2 py-1 bg-gray-800 rounded font-bold')
 
     with ui.row().classes('w-full h-[94vh] p-0 gap-0'):
-        
-        # ZONE VISUELLE
-        with ui.card().classes('w-full h-full bg-gradient-to-b from-[#1a1c24] to-[#0a0c10] p-0 items-center justify-center relative'):
+        with ui.card().classes('w-full h-full bg-black p-0 items-center justify-center relative'):
             
-            # 1. Structure SVG (Statique)
             ui.html(HAND_SVG_STRUCTURE, sanitize=False).classes('w-full h-full')
-            # 2. Injection JS (Animation)
             ui.add_body_html(HAND_ANIMATION_JS)
             
-            # PIP
             with ui.element('div').classes('absolute bottom-6 right-6 w-64 h-48 bg-black z-50 pip-cam rounded-lg overflow-hidden'):
                 ui.label('OPTICAL FEED').classes('absolute top-0 left-0 bg-cyan-900/90 text-cyan-100 text-[10px] px-2 z-10')
                 ui.image(MJPEG_URL).classes('w-full h-full object-cover opacity-80')
 
-            # CONTROL PANEL
             with ui.column().classes('absolute top-6 left-6 w-52 p-4 panel rounded-lg gap-2'):
                 ui.label('MANUAL OVERRIDE').classes('text-xs font-bold text-cyan-400 mb-2')
                 ui.button('OUVRIR', on_click=lambda: controller.open_hand()).classes('w-full bg-cyan-700 h-8 text-xs')
@@ -387,10 +420,14 @@ def build_ui():
                     with state_lock: state['simu_mode'] = not state['simu_mode']
                 ui.button('AUTO-TEST (SIMU)', on_click=toggle_sim).classes('w-full bg-purple-700 h-8 text-xs')
 
-                ui.label('DEBUG DATA:').classes('text-[10px] text-gray-500 mt-2')
+                # --- BOUTONS DE SÉCURITÉ AJOUTÉS ---
+                ui.separator().classes('bg-gray-600 my-2')
+                ui.button("ARRÊT D'URGENCE", on_click=emergency_stop).classes('w-full bg-red-600 text-white font-bold h-10 text-xs blinking-btn')
+                ui.button('QUITTER SYSTEME', on_click=app.shutdown).classes('w-full bg-gray-700 text-gray-300 h-8 text-xs')
+
+                ui.label('DATA STREAM:').classes('text-[10px] text-gray-500 mt-2')
                 debug_lbl = ui.label('...').classes('text-[9px] font-mono text-cyan-300 break-all')
 
-    # BOUCLE PYTHON -> JS
     def update_loop():
         try:
             with state_lock:
@@ -423,6 +460,9 @@ def build_ui():
 # 6. RUN
 # --------------------------------------------------------------------
 if __name__ in {"__main__", "__mp_main__"}:
+    # Enregistrement du gestionnaire CTRL+C
+    signal.signal(signal.SIGINT, signal_handler)
+    
     try: controller = HandController()
     except: sys.exit(1)
 
@@ -430,4 +470,4 @@ if __name__ in {"__main__", "__mp_main__"}:
     threading.Thread(target=hardware_thread, args=(controller,), daemon=True).start()
 
     build_ui()
-    ui.run(host='0.0.0.0', port=8080, dark=True, reload=False, title='NEURO-LINK V12')
+    ui.run(host='0.0.0.0', port=8080, dark=True, reload=False, title='NEURO-LINK V17')
