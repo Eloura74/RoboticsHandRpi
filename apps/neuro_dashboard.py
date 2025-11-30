@@ -8,6 +8,8 @@ import threading
 import os
 import signal
 import subprocess
+import math
+import traceback
 from pathlib import Path
 from nicegui import ui, app
 
@@ -21,7 +23,6 @@ if str(BASE_DIR) not in sys.path:
 try:
     from core.hand_controller import HandController
 except ImportError:
-    # Mode mockup de secours
     class HandController:
         def open_hand(self, parallel=True): pass
         def close_hand(self, parallel=True): pass
@@ -39,377 +40,394 @@ MJPEG_URL = f'http://{PC_IP}:{MJPEG_PORT}/cam.mjpg'
 
 UDP_IP = '0.0.0.0'
 UDP_PORT = 5005
-
 OPEN_THRESHOLD = 0.30
 CLOSE_THRESHOLD = 0.70
-LOST_TIMEOUT = 3.0
-
+LOST_TIMEOUT = 2.0
 FINGERS = ['pouce_articulation', 'index', 'majeur', 'annulaire_auriculaire']
 
-# Variable globale pour l'accès UI
 controller = None 
 
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except:
+        return "127.0.0.1"
+LOCAL_IP = get_local_ip()
+
 # --------------------------------------------------------------------
-# 3. GESTION DES PROCESSUS FANTÔMES (AUTO-KILL)
+# 3. GESTION ÉTAT & THREADS
 # --------------------------------------------------------------------
 def kill_port_hog(port):
-    """Tue tout processus utilisant le port UDP spécifié."""
-    try:
-        cmd = f"lsof -t -i:{port}"
-        pid = subprocess.check_output(cmd, shell=True).decode().strip()
-        if pid:
-            current_pid = str(os.getpid())
-            if pid != current_pid:
-                print(f"[SYSTEM] Processus fantôme détecté sur le port {port} (PID {pid}). TERMINATION...")
-                os.kill(int(pid), signal.SIGKILL)
-                time.sleep(1)
-                print("[SYSTEM] Port libéré.")
-    except Exception:
-        pass 
+    pass
 
-# --------------------------------------------------------------------
-# 4. ÉTAT PARTAGÉ & LOGIQUE UDP (AVEC MOUVEMENTS PARALLÈLES)
-# --------------------------------------------------------------------
 state_lock = threading.Lock()
 state = {
-    'values': {name: 0.0 for name in FINGERS},
+    'values': {f: 0.0 for f in FINGERS},
     'udp_connected': False,
-    'last_message': 'Système en attente...',
-    'fps': 0
+    'last_message': 'Système prêt.',
+    'fps': 0,
+    'packet_count': 0,
+    'simu_mode': False
 }
 
-def udp_worker(ctrl_ref):
-    """Thread UDP : Reçoit les données et commande le Hardware via la référence."""
+# --- THREAD RÉCEPTION (UDP PARTAGÉ) ---
+def receiver_thread():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if hasattr(socket, 'SO_REUSEPORT'):
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         sock.bind((UDP_IP, UDP_PORT))
-    except OSError as e:
-        print(f"[FATAL] Impossible de lier le port {UDP_PORT}: {e}")
+    except Exception as e:
+        print(f"[ERREUR] Socket: {e}")
         return
 
-    sock.settimeout(0.2)
-    print(f"[UDP] Réception active sur {UDP_PORT}")
-
-    logical_state = {name: 'open' for name in FINGERS}
-    last_packet_time = time.time()
-    hand_visible = False
-    packet_counter = 0
+    sock.setblocking(False)
+    packet_cnt = 0
     t0 = time.time()
-
+    last_rx = time.time()
+    
     while True:
         now = time.time()
-
-        # Watchdog
-        if hand_visible and (now - last_packet_time > LOST_TIMEOUT):
-            try: 
-                # ✨ NOUVEAU : Mode parallèle pour ouverture de sécurité rapide
-                ctrl_ref.open_hand(parallel=True)
-            except: pass
-            hand_visible = False
-            logical_state = {name: 'open' for name in FINGERS}
+        if state['udp_connected'] and (now - last_rx > LOST_TIMEOUT):
             with state_lock:
-                state['values'] = {name: 0.0 for name in FINGERS}
                 state['udp_connected'] = False
-                state['last_message'] = '⚠️ SIGNAL PERDU - SÉCURITÉ'
-
-        # Réception
+                state['last_message'] = "⚠️ PERTE SIGNAL"
+        
+        data = None
         try:
-            data, _ = sock.recvfrom(4096)
-        except socket.timeout:
-            continue
-        except Exception:
-            time.sleep(0.05)
-            continue
-
-        # Calcul FPS UDP
-        packet_counter += 1
-        if now - t0 > 1.0:
-            with state_lock: state['fps'] = packet_counter
-            packet_counter = 0
-            t0 = now
-
-        raw = data.decode('utf-8', errors='ignore').strip()
-        if not raw: continue
+            while True:
+                chunk, _ = sock.recvfrom(4096)
+                data = chunk
+        except: pass
         
-        try: msg = json.loads(raw)
-        except: continue
-
-        hand_visible = True
-        last_packet_time = now
-
-        # Mise à jour valeurs & Hardware
-        with state_lock:
-            state['udp_connected'] = True
+        if data:
+            last_rx = now
+            packet_cnt += 1
+            if now - t0 > 1.0:
+                with state_lock: state['fps'] = packet_cnt
+                packet_cnt = 0
+                t0 = now
             
-        temp_values = state['values'].copy()
-        
-        for finger in FINGERS:
-            if finger not in msg: continue
             try:
-                val = float(msg[finger])
-                val = max(0.0, min(1.0, val))
-                temp_values[finger] = val
-                
-                # Hardware Logic
-                current = logical_state.get(finger, 'open')
-                if val > CLOSE_THRESHOLD and current != 'close':
-                    # ✨ NOUVEAU : parallel=True pour mouvements fluides
-                    ctrl_ref.close_finger(finger, parallel=True)
-                    logical_state[finger] = 'close'
-                elif val < OPEN_THRESHOLD and current != 'open':
-                    # ✨ NOUVEAU : parallel=True pour mouvements fluides
-                    ctrl_ref.open_finger(finger, parallel=True)
-                    logical_state[finger] = 'open'
-            except: continue
-            
+                msg = json.loads(data.decode())
+                with state_lock:
+                    if not state['simu_mode']:
+                        state['udp_connected'] = True
+                        state['packet_count'] += 1
+                        for f in FINGERS:
+                            if f in msg:
+                                state['values'][f] = max(0.0, min(1.0, float(msg[f])))
+            except: pass
+        time.sleep(0.001)
+
+# --- THREAD HARDWARE (ROBOT) ---
+def hardware_thread(ctrl):
+    logical = {f: 'open' for f in FINGERS}
+    while True:
+        targets = {}
         with state_lock:
-            state['values'] = temp_values
-            if packet_counter % 20 == 0: # Log moins fréquent
-                state['last_message'] = 'Tracking actif - Données reçues'
+            targets = state['values'].copy()
+            active = state['udp_connected'] or state['simu_mode']
+            
+        if active:
+            try:
+                for f, val in targets.items():
+                    curr = logical.get(f, 'open')
+                    if val > CLOSE_THRESHOLD and curr != 'close':
+                        ctrl.close_finger(f, parallel=True)
+                        logical[f] = 'close'
+                    elif val < OPEN_THRESHOLD and curr != 'open':
+                        ctrl.open_finger(f, parallel=True)
+                        logical[f] = 'open'
+            except: pass
+        time.sleep(0.05)
 
 # --------------------------------------------------------------------
-# 5. INTERFACE GRAPHIQUE (CYBERPUNK THEME)
+# 4. RESSOURCES GRAPHIQUES (V12 - CINÉMATIQUE CORRIGÉE)
+# --------------------------------------------------------------------
+
+# PARTIE 1 : STRUCTURE SVG
+# Note: Thumb is on LEFT (Translate X < 0) for a Left Hand Palm View or Right Hand Back View.
+# Adjusted translations to spread fingers naturally.
+HAND_SVG_STRUCTURE = r'''
+<div style="width:100%; height:100%; position:relative; display:flex; justify-content:center; align-items:center; overflow:hidden;">
+    
+    <svg style="position:absolute; width:100%; height:100%; opacity:0.1; pointer-events:none;">
+        <defs><pattern id="g" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 L0 0 0 40" fill="none" stroke="#00f3ff" stroke-width="0.5"/></pattern></defs>
+        <rect width="100%" height="100%" fill="url(#g)" />
+    </svg>
+
+    <div id="js-heartbeat" style="position:absolute; top:10px; right:10px; width:8px; height:8px; border-radius:50%; background:#333; z-index:100;"></div>
+
+    <!-- MAIN ROBOTIQUE (Vue de Face) -->
+    <svg id="robot-hand" viewBox="-200 -450 400 500" style="height:95%; width:auto; z-index:10; filter:drop-shadow(0 10px 20px rgba(0,0,0,0.8));">
+        <defs>
+            <linearGradient id="pla-grey" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="50%" stop-color="#808080"/><stop offset="100%" stop-color="#3a3a3a"/></linearGradient>
+            <linearGradient id="tendon-glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00f3ff" stop-opacity="0"/><stop offset="100%" stop-color="#00f3ff" stop-opacity="0.8"/></linearGradient>
+        </defs>
+
+        <!-- Poignet / Avant-bras -->
+        <g transform="translate(0, 50)">
+            <path d="M-60,0 L-50,-80 L50,-80 L60,0 L60,100 L-60,100 Z" fill="#222" stroke="#111" stroke-width="2"/>
+            <!-- Servo Thumb Base -->
+            <rect x="-80" y="-70" width="40" height="60" rx="5" fill="#111" stroke="#333" />
+        </g>
+
+        <!-- Paume -->
+        <path d="M-55,-30 L-70,-130 L-45,-180 L45,-180 L70,-130 L55,-30 Z" fill="url(#pla-grey)" stroke="#222" stroke-width="2" />
+        
+        <!-- Decoration Paume -->
+        <path d="M-40,-40 L-50,-120 L40,-40" fill="none" stroke="#222" stroke-width="1" opacity="0.5"/>
+
+        <!-- DOIGTS (Placement en éventail) -->
+        <!-- Pouce (Gauche) -->
+        <g id="grp-pouce" transform="translate(-75, -90) rotate(-30)"></g>
+        
+        <!-- Index -->
+        <g id="grp-index" transform="translate(-45, -180) rotate(-5)"></g>
+        
+        <!-- Majeur -->
+        <g id="grp-majeur" transform="translate(0, -185)"></g>
+        
+        <!-- Annulaire -->
+        <g id="grp-annulaire" transform="translate(50, -175) rotate(5)"></g>
+    </svg>
+</div>
+'''
+
+# PARTIE 2 : JS (Cinématique Realiste 2D)
+HAND_ANIMATION_JS = r'''
+<script>
+(function() {
+    const fingers = ['pouce', 'index', 'majeur', 'annulaire'];
+    const fingerMap = {
+        'pouce_articulation': 'pouce', 'index': 'index', 
+        'majeur': 'majeur', 'annulaire_auriculaire': 'annulaire'
+    };
+    
+    // Valeurs cibles (0=ouvert, 1=fermé)
+    let targets = { pouce: 0, index: 0, majeur: 0, annulaire: 0 };
+    let currents = { pouce: 0, index: 0, majeur: 0, annulaire: 0 };
+    let hbState = false;
+
+    function createFingerDOM(id, isThumb) {
+        const g = document.getElementById('grp-' + id);
+        if(!g) return;
+        
+        // Dimensions adaptées aux phalanges imprimées 3D
+        // P1 (Base), P2 (Milieu), P3 (Bout)
+        // Les phalanges se dessinent vers le HAUT (Y négatif)
+        
+        const w = isThumb ? 28 : 24; 
+        const h1 = isThumb ? 50 : 60;
+        const h2 = isThumb ? 40 : 50;
+        const h3 = isThumb ? 35 : 40;
+        
+        let html = `
+        <!-- Tendon Visual -->
+        <line x1="0" y1="0" x2="0" y2="-150" stroke="url(#tendon-glow)" stroke-width="2" opacity="0" class="tendon-fx" />
+        
+        <!-- P1 -->
+        <g class="p1">
+            <rect x="${-w/2}" y="${-h1}" width="${w}" height="${h1}" rx="4" fill="url(#pla-grey)" stroke="#222" />
+            <circle cx="0" cy="${-h1+10}" r="2" fill="#111" opacity="0.5"/>
+            
+            <!-- P2 -->
+            <g class="p2" transform="translate(0, ${-h1})">
+                <circle cx="0" cy="0" r="${w/2 - 2}" fill="#333" />
+                <rect x="${-w/2+2}" y="${-h2}" width="${w-4}" height="${h2}" rx="3" fill="url(#pla-grey)" stroke="#222" />
+                
+                <!-- P3 -->
+                <g class="p3" transform="translate(0, ${-h2})">
+                    <circle cx="0" cy="0" r="${w/2 - 4}" fill="#333" />
+                    <path d="M${-w/2+4},0 L${-w/2+4},${-h3+10} Q0,${-h3} ${w/2-4},${-h3+10} L${w/2-4},0 Z" fill="url(#pla-grey)" stroke="#222" />
+                </g>
+            </g>
+        </g>`;
+        g.innerHTML = html;
+    }
+
+    window.updateHandData = function(jsonStr) {
+        try {
+            const data = JSON.parse(jsonStr);
+            for(const [key, val] of Object.entries(data)) {
+                if(fingerMap[key]) targets[fingerMap[key]] = val;
+            }
+        } catch(e) {}
+    };
+
+    function animate() {
+        const alpha = 0.2; // Vitesse de lissage
+        
+        // Clignotement LED verte si actif
+        const hb = document.getElementById('js-heartbeat');
+        if(hb) {
+            hbState = !hbState;
+            hb.style.background = hbState ? '#00ff00' : '#004400';
+        }
+
+        fingers.forEach(f => {
+            // Interpolation
+            let diff = targets[f] - currents[f];
+            if(Math.abs(diff) < 0.001) currents[f] = targets[f];
+            else currents[f] += diff * alpha;
+            
+            const val = currents[f];
+            const g = document.getElementById('grp-' + f);
+            if(!g) return;
+            
+            // Effet visuel du tendon qui se tend
+            const tendon = g.querySelector('.tendon-fx');
+            if(tendon) tendon.style.opacity = val * 0.8;
+
+            const p1 = g.querySelector('.p1');
+            const p2 = g.querySelector('.p2');
+            const p3 = g.querySelector('.p3');
+
+            if(f === 'pouce') {
+                // CINEMATIQUE POUCE (Rotation 2D vers la paume)
+                // Le pouce tourne à sa base pour "entrer" dans la main
+                const rotBase = val * 90; // 0 -> 90 degrés (fermeture)
+                const rotP2 = val * 40;
+                const rotP3 = val * 60;
+                
+                if(p1) p1.setAttribute('transform', `rotate(${rotBase})`);
+                if(p2) p2.setAttribute('transform', `translate(0, -50) rotate(${rotP2})`);
+                if(p3) p3.setAttribute('transform', `translate(0, -40) rotate(${rotP3})`);
+                
+            } else {
+                // CINEMATIQUE DOIGTS (Foreshortening / Raccourcissement visuel)
+                // Pour simuler un doigt qui se plie VERS la caméra en 2D, on réduit sa hauteur (Scale Y)
+                // et on décale légèrement Y pour simuler l'enroulement.
+                
+                // P1: Reste fixe mais bascule un peu vers l'avant (Scale Y 90%)
+                const s1 = 1.0 - (val * 0.1);
+                
+                // P2: Se plie beaucoup (Scale Y diminue -> effet de perspective) + Rotation légère pour courber
+                const s2 = 1.0 - (val * 0.4); 
+                const r2 = val * 10; // Légère courbure naturelle
+                
+                // P3: Le bout se replie (Scale Y diminue fort) + Rotation pour "rentrer"
+                const s3 = 1.0 - (val * 0.5);
+                const r3 = val * 20;
+
+                // Application
+                if(p1) p1.setAttribute('transform', `scale(1, ${s1})`);
+                if(p2) p2.setAttribute('transform', `translate(0, -60) rotate(${r2}) scale(1, ${s2})`);
+                if(p3) p3.setAttribute('transform', `translate(0, -50) rotate(${r3}) scale(1, ${s3})`);
+            }
+        });
+        
+        requestAnimationFrame(animate);
+    }
+
+    function init() {
+        if(document.getElementById('robot-hand')) {
+            fingers.forEach(f => createFingerDOM(f, f==='pouce'));
+            animate();
+            console.log("V12 Engine Running");
+        } else {
+            setTimeout(init, 50);
+        }
+    }
+    init();
+})();
+</script>
+'''
+
+# --------------------------------------------------------------------
+# 5. UI PRINCIPALE
 # --------------------------------------------------------------------
 def build_ui():
-    # --- CSS FUTURISTE ---
     ui.add_head_html('''
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap');
-        
-        :root {
-            --neon-cyan: #00f3ff;
-            --neon-pink: #ff0055;
-            --neon-yellow: #ffcc00;
-            --bg-dark: #050a14;
-            --panel-bg: rgba(10, 20, 40, 0.7);
-        }
-
-        body {
-            background-color: var(--bg-dark);
-            background-image: 
-                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
-            background-size: 40px 40px;
-            font-family: 'Rajdhani', sans-serif;
-            color: #e0f7fa;
-            overflow: hidden;
-        }
-
-        .cyber-panel {
-            background: var(--panel-bg);
-            border: 1px solid rgba(0, 243, 255, 0.2);
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.05);
-            backdrop-filter: blur(5px);
-            position: relative;
-        }
-
-        /* Coins HUD */
-        .cyber-panel::before {
-            content: ''; position: absolute; top: -1px; left: -1px;
-            width: 10px; height: 10px;
-            border-top: 2px solid var(--neon-cyan);
-            border-left: 2px solid var(--neon-cyan);
-        }
-        .cyber-panel::after {
-            content: ''; position: absolute; bottom: -1px; right: -1px;
-            width: 10px; height: 10px;
-            border-bottom: 2px solid var(--neon-cyan);
-            border-right: 2px solid var(--neon-cyan);
-        }
-
-        .bar-container {
-            background: rgba(0,0,0,0.5);
-            border: 1px solid #333;
-            border-radius: 2px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .bar-fill {
-            transition: height 0.08s ease-out; /* Très fluide */
-            box-shadow: 0 0 10px currentColor;
-            width: 100%;
-            position: absolute;
-            bottom: 0;
-            opacity: 0.9;
-        }
-
-        .scanline {
-            width: 100%; height: 2px;
-            background: rgba(0, 243, 255, 0.3);
-            position: absolute; top: 0; left: 0;
-            animation: scan 3s linear infinite;
-            pointer-events: none;
-            z-index: 50;
-        }
-        @keyframes scan { 0% {top:0%;} 100% {top:100%;} }
-
-        .header-title { font-family: 'Share Tech Mono', monospace; letter-spacing: 2px; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
+        body { background: #080a10; color: #e0e0e0; font-family: 'Orbitron', sans-serif; overflow: hidden; }
+        .pip-cam { border: 2px solid #00f3ff; box-shadow: 0 0 15px rgba(0, 243, 255, 0.3); }
+        .panel { background: rgba(20, 25, 35, 0.95); border: 1px solid #334455; }
     </style>
     ''')
 
-    bars = {}
-    finger_conf = [
-        ('index', 'INDEX', 'var(--neon-cyan)'),
-        ('majeur', 'MIDDLE', '#bd00ff'),
-        ('annulaire_auriculaire', 'RING/PINKY', 'var(--neon-pink)'),
-        ('pouce_articulation', 'THUMB', 'var(--neon-yellow)'),
-    ]
-    
-    # UI REF
-    udp_status = None
-    log_label = None
+    with ui.row().classes('w-full h-[6vh] items-center justify-between px-4 bg-[#05070a] border-b border-[#334455]'):
+        with ui.row().classes('items-center gap-2'):
+            ui.icon('fingerprint', color='cyan-400').classes('text-xl')
+            ui.label('NEURO-LINK // V12 CINEMATICS').classes('text-xl font-bold tracking-widest text-gray-200')
+        with ui.row().classes('items-center gap-4'):
+            ui.label(f'HOST: {LOCAL_IP}').classes('text-xs font-mono text-gray-500')
+            status = ui.label('INIT').classes('text-xs px-2 py-1 bg-gray-800 rounded font-bold')
 
-    # --- HEADER ---
-    with ui.row().classes('w-full h-[8vh] items-center justify-between px-6 border-b border-cyan-900/30 bg-[#020617]/80'):
-        with ui.row().classes('items-center gap-3'):
-            ui.icon('hub', color='cyan-400').classes('text-2xl animate-pulse')
-            with ui.column().classes('gap-0'):
-                ui.label('NEUROLINK').classes('text-2xl text-cyan-400 header-title font-bold')
-                ui.label('SYSTEM V3.3 // PARALLEL MODE').classes('text-[0.6rem] text-cyan-700 tracking-[0.3em]')
-
-        with ui.row().classes('gap-4 items-center'):
-            udp_status = ui.label('UDP: DISCONNECTED').classes('text-xs font-mono px-2 py-1 border border-red-900 text-red-500 bg-red-900/10')
-            ui.button('EMERGENCY STOP', on_click=lambda: controller.stop_all() if controller else None).classes('bg-red-600 text-white text-xs font-bold px-4 py-2 hover:bg-red-500 shadow-[0_0_15px_red]')
-
-    # --- MAIN GRID ---
-    with ui.row().classes('w-full h-[90vh] p-4 gap-4 no-wrap'):
-
-        # COL 1 : BIO-METRICS (Barres)
-        with ui.column().classes('w-1/4 h-full cyber-panel p-4 flex flex-col'):
-            ui.label('SERVO METRICS').classes('text-cyan-500 text-sm font-bold tracking-widest mb-4 border-b border-cyan-900/50 w-full pb-1')
-            
-            # Zone barres
-            with ui.row().classes('w-full flex-1 justify-between gap-2 items-end pb-4'):
-                for fid, label, color in finger_conf:
-                    with ui.column().classes('h-full flex-1 items-center justify-between'):
-                        ui.label(label).classes('text-[0.6rem] text-slate-500 font-mono rotate-0')
-                        
-                        # Jauge
-                        with ui.element('div').classes('bar-container w-full max-w-[20px] h-[80%]'):
-                            # Fond quadrillé discret
-                            ui.element('div').style('width:100%; height:100%; background: repeating-linear-gradient(0deg, transparent, transparent 19px, #112 20px); opacity: 0.3;')
-                            # La barre dynamique
-                            bar = ui.element('div').classes('bar-fill').style(f'height: 0%; background-color: {color};')
-                        
-                        val_label = ui.label('0%').classes('text-[0.7rem] font-mono font-bold mt-1').style(f'color: {color}')
-                        bars[fid] = (bar, val_label)
-
-            # Footer Metrics
-            with ui.row().classes('w-full justify-between mt-auto border-t border-cyan-900/30 pt-2'):
-                with ui.column().classes('gap-0'):
-                    ui.label('VOLTAGE').classes('text-[0.5rem] text-slate-500')
-                    ui.label('5.1 V').classes('text-xs text-yellow-400 font-mono')
-                with ui.column().classes('gap-0 items-end'):
-                    ui.label('CPU LOAD').classes('text-[0.5rem] text-slate-500')
-                    ui.label('12 %').classes('text-xs text-cyan-400 font-mono')
-
-
-        # COL 2 : OPTICAL FEED (Video)
-        with ui.column().classes('w-2/4 h-full gap-4'):
-            # Cadre Vidéo
-            with ui.card().classes('cyber-panel w-full h-3/4 p-0 overflow-hidden relative flex flex-col'):
-                # Overlay HUD
-                ui.element('div').classes('scanline')
-                ui.label('LIVE OPTICAL FEED').classes('absolute top-2 left-2 bg-black/50 px-2 text-[0.6rem] text-cyan-500 border-l-2 border-cyan-500')
-                ui.label('REC ●').classes('absolute top-2 right-2 text-red-500 text-xs font-bold animate-pulse')
-                
-                # Image stream
-                with ui.element('div').classes('w-full h-full bg-black flex items-center justify-center'):
-                    ui.image(MJPEG_URL).classes('w-full h-full object-contain')
-                    
-                # Crosshair
-                ui.element('div').style('position:absolute; top:50%; left:50%; width:20px; height:1px; background:rgba(0,255,255,0.3); transform:translate(-50%,-50%);')
-                ui.element('div').style('position:absolute; top:50%; left:50%; width:1px; height:20px; background:rgba(0,255,255,0.3); transform:translate(-50%,-50%);')
-
-            # Log Terminal
-            with ui.card().classes('cyber-panel w-full h-1/4 p-2 bg-black/80 font-mono text-xs overflow-hidden flex flex-col'):
-                ui.label('> SYSTEM TERMINAL').classes('text-slate-600 text-[0.6rem] mb-1')
-                with ui.scroll_area().classes('w-full h-full'):
-                    log_label = ui.label('> Initialisation...').classes('text-green-500/80')
-
-        # COL 3 : CONTROLS
-        with ui.column().classes('w-1/4 h-full cyber-panel p-4 flex flex-col'):
-            ui.label('CONTROL DECK').classes('text-cyan-500 text-sm font-bold tracking-widest mb-4 border-b border-cyan-900/50 w-full pb-1')
-
-            # Boutons manuels (utilisent le mode parallèle par défaut)
-            with ui.column().classes('gap-3 w-full'):
-                ui.button('OUVERTURE MAX', on_click=lambda: controller.open_hand() if controller else None).classes('w-full bg-cyan-900/30 border border-cyan-500 text-cyan-400 text-xs hover:bg-cyan-900/50')
-                ui.button('FERMETURE MAX', on_click=lambda: controller.close_hand() if controller else None).classes('w-full bg-purple-900/30 border border-purple-500 text-purple-400 text-xs hover:bg-purple-900/50')
-            
-            ui.separator().classes('bg-cyan-900/30 my-4')
-
-            # Settings (Fake sliders for UI demo)
-            ui.label('PARAMÈTRES DSP').classes('text-[0.6rem] text-slate-500 mb-2')
-            with ui.row().classes('items-center w-full gap-2'):
-                ui.label('GAIN').classes('text-xs text-cyan-300 w-8')
-                ui.slider(min=0, max=100, value=75).props('dark color=cyan').classes('flex-1')
-            
-            with ui.row().classes('items-center w-full gap-2 mt-2'):
-                ui.label('SMOOTH').classes('text-xs text-purple-300 w-8')
-                ui.slider(min=0, max=100, value=30).props('dark color=purple').classes('flex-1')
-
-            # Footer Quit
-            ui.button('SHUTDOWN SYSTEM', on_click=lambda: (controller.shutdown() if controller else None, os._exit(0))).classes('mt-auto w-full bg-slate-900 text-red-500 border border-red-900/30 text-xs')
-
-    # --- UPDATE LOOP ---
-    def update_ui():
-        with state_lock:
-            current_state = dict(state)
+    with ui.row().classes('w-full h-[94vh] p-0 gap-0'):
         
-        # 1. Update Barres
-        vals = current_state['values']
-        for fid, (bar_elem, lbl_elem) in bars.items():
-            val = vals.get(fid, 0.0)
-            pct = int(val * 100)
-            bar_elem.style(f'height: {pct}%')
-            lbl_elem.text = f'{pct:02d}%'
+        # ZONE VISUELLE
+        with ui.card().classes('w-full h-full bg-gradient-to-b from-[#1a1c24] to-[#0a0c10] p-0 items-center justify-center relative'):
             
-        # 2. Status UDP
-        if current_state['udp_connected']:
-            udp_status.text = f'UDP: LINKED ({current_state.get("fps",0)} PPS)'
-            udp_status.classes(remove='text-red-500 border-red-900 bg-red-900/10', add='text-cyan-400 border-cyan-500 bg-cyan-900/20')
-        else:
-            udp_status.text = 'UDP: NO CARRIER'
-            udp_status.classes(remove='text-cyan-400 border-cyan-500 bg-cyan-900/20', add='text-red-500 border-red-900 bg-red-900/10')
+            # 1. Structure SVG (Statique)
+            ui.html(HAND_SVG_STRUCTURE, sanitize=False).classes('w-full h-full')
+            # 2. Injection JS (Animation)
+            ui.add_body_html(HAND_ANIMATION_JS)
             
-        # 3. Log
-        msg = current_state['last_message']
-        if msg:
-            ts = time.strftime('%H:%M:%S')
-            log_label.text = f'> [{ts}] {msg}\n' + log_label.text[:300]
+            # PIP
+            with ui.element('div').classes('absolute bottom-6 right-6 w-64 h-48 bg-black z-50 pip-cam rounded-lg overflow-hidden'):
+                ui.label('OPTICAL FEED').classes('absolute top-0 left-0 bg-cyan-900/90 text-cyan-100 text-[10px] px-2 z-10')
+                ui.image(MJPEG_URL).classes('w-full h-full object-cover opacity-80')
 
-    ui.timer(0.05, update_ui)
+            # CONTROL PANEL
+            with ui.column().classes('absolute top-6 left-6 w-52 p-4 panel rounded-lg gap-2'):
+                ui.label('MANUAL OVERRIDE').classes('text-xs font-bold text-cyan-400 mb-2')
+                ui.button('OUVRIR', on_click=lambda: controller.open_hand()).classes('w-full bg-cyan-700 h-8 text-xs')
+                ui.button('FERMER', on_click=lambda: controller.close_hand()).classes('w-full bg-red-700 h-8 text-xs')
+                ui.separator().classes('bg-gray-600 my-2')
+                
+                def toggle_sim():
+                    with state_lock: state['simu_mode'] = not state['simu_mode']
+                ui.button('AUTO-TEST (SIMU)', on_click=toggle_sim).classes('w-full bg-purple-700 h-8 text-xs')
+
+                ui.label('DEBUG DATA:').classes('text-[10px] text-gray-500 mt-2')
+                debug_lbl = ui.label('...').classes('text-[9px] font-mono text-cyan-300 break-all')
+
+    # BOUCLE PYTHON -> JS
+    def update_loop():
+        try:
+            with state_lock:
+                if state['simu_mode']:
+                    t = time.time()
+                    for i, f in enumerate(FINGERS):
+                        state['values'][f] = (math.sin(t*3 + i) + 1) / 2
+                
+                vals = state['values']
+                connected = state['udp_connected'] or state['simu_mode']
+                curr_fps = state['fps']
+                pkts = state['packet_count']
+
+            json_data = json.dumps(vals)
+            ui.run_javascript(f"if(window.updateHandData) window.updateHandData('{json_data}');")
+
+            if connected:
+                status.text = f"ONLINE ({curr_fps} PPS)"
+                status.classes(replace='bg-green-900 text-green-300')
+            else:
+                status.text = "OFFLINE"
+                status.classes(replace='bg-red-900 text-red-300')
+            
+            debug_lbl.text = f"P:{pkts} | {vals['index']:.2f}"
+        except: pass
+
+    ui.timer(0.05, update_loop)
 
 # --------------------------------------------------------------------
-# 6. DÉMARRAGE SÉCURISÉ (FIX MAIN THREAD)
+# 6. RUN
 # --------------------------------------------------------------------
 if __name__ in {"__main__", "__mp_main__"}:
-    print("--- BOOT SEQUENCE INITIATED (V3.3 - PARALLEL MODE) ---")
-    
-    # 1. KILL ZOMBIE PROCESSES
-    kill_port_hog(UDP_PORT)
-    
-    # 2. INIT HARDWARE (DANS LE MAIN THREAD OBLIGATOIREMENT)
-    try:
-        controller = HandController()
-        print("[HARDWARE] Servo Controller Initialized (Parallel Mode Enabled).")
-    except Exception as e:
-        print(f"[ERREUR CRITIQUE] Impossible d'initier le hardware: {e}")
-        sys.exit(1)
-    
-    # 3. START UDP THREAD (AVEC REFERENCE DU CONTROLEUR)
-    t = threading.Thread(target=udp_worker, args=(controller,), daemon=True)
-    t.start()
-    
-    # 4. BUILD UI
+    try: controller = HandController()
+    except: sys.exit(1)
+
+    threading.Thread(target=receiver_thread, daemon=True).start()
+    threading.Thread(target=hardware_thread, args=(controller,), daemon=True).start()
+
     build_ui()
-    
-    # 5. RUN
-    ui.run(
-        host='0.0.0.0', 
-        port=8080, 
-        reload=False, # CRUCIAL
-        dark=True, 
-        title='NeuroLink V3.3 - Parallel'
-    )
+    ui.run(host='0.0.0.0', port=8080, dark=True, reload=False, title='NEURO-LINK V12')
