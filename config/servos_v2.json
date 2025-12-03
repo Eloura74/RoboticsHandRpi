@@ -15,7 +15,7 @@
       "speed_close": 0.5,
       "speed_open": 0.5,
       "t_close": 0.820,
-      "t_open": 0.39
+      "t_open": 0.37
     },
     "index": {
       "channel": 2,
@@ -23,17 +23,17 @@
       "dir_close": -1,
       "speed_close": 0.5,
       "speed_open": 0.5,
-      "t_close": 0.850,
-      "t_open": 0.72
+      "t_close": 0.9,
+      "t_open": 0.77
     },
     "majeur": {
       "channel": 0,
-      "neutral": 0.350,
+      "neutral": 0.400,
       "dir_close": -1,
       "speed_close": 0.5,
       "speed_open": 0.5,
       "t_close": 0.82,
-      "t_open": 0.75
+      "t_open": 0.68
     },
     "annulaire_auriculaire": {
       "channel": 1,

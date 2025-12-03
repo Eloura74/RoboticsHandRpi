@@ -138,17 +138,22 @@ class HandController:
     # ==================================================================
     # Mouvement d'un doigt (ouverture / fermeture)
     # ==================================================================
-    def _move_finger_blocking(self, name: str, action: str) -> None:
+    def _move_finger_blocking(self, name: str, action: str, force: bool = False) -> None:
         """
         Déplace un doigt en utilisant les durées calibrées.
         action = "open" ou "close".
         Mouvement BLOQUANT, puis retour neutre.
-        Si le doigt est déjà dans l'état demandé -> aucun mouvement.
+        Si le doigt est déjà dans l'état demandé -> aucun mouvement (sauf si force=True).
+        
+        Args:
+            name: Nom du doigt
+            action: "open" ou "close"
+            force: Si True, force le mouvement même si déjà dans cet état (utile pour calibration)
         """
         if name not in self.servos_conf:
             raise ValueError(f"Doigt inconnu : {name}")
 
-        if self.state.get(name) == action:
+        if not force and self.state.get(name) == action:
             return
 
         conf = self.servos_conf[name]
@@ -194,21 +199,21 @@ class HandController:
         self.state[name] = action
         self._stop_flags[name].clear()
     
-    def _move_finger_thread(self, name: str, action: str) -> None:
+    def _move_finger_thread(self, name: str, action: str, force: bool = False) -> None:
         """
         Wrapper thread-safe pour mouvement d'un doigt.
         Utilisé pour les mouvements parallèles.
         """
         with self._finger_locks[name]:
             try:
-                self._move_finger_blocking(name, action)
+                self._move_finger_blocking(name, action, force=force)
             except Exception as e:
                 print(f"[ERREUR] Thread doigt '{name}': {e}")
 
     # ==================================================================
     # API publique
     # ==================================================================
-    def open_finger(self, name: str, parallel: bool = False) -> None:
+    def open_finger(self, name: str, parallel: bool = False, force: bool = False) -> None:
         """
         Ouvre un doigt.
         
@@ -216,13 +221,14 @@ class HandController:
             name: Nom du doigt
             parallel: Si True, démarre le mouvement dans un thread (non-bloquant)
                      Si False, mouvement bloquant (défaut)
+            force: Si True, force le mouvement même si déjà ouvert (utile pour calibration)
         """
         if parallel:
-            self._start_finger_movement(name, "open")
+            self._start_finger_movement(name, "open", force=force)
         else:
-            self._move_finger_blocking(name, "open")
+            self._move_finger_blocking(name, "open", force=force)
 
-    def close_finger(self, name: str, parallel: bool = False) -> None:
+    def close_finger(self, name: str, parallel: bool = False, force: bool = False) -> None:
         """
         Ferme un doigt.
         
@@ -230,13 +236,14 @@ class HandController:
             name: Nom du doigt
             parallel: Si True, démarre le mouvement dans un thread (non-bloquant)
                      Si False, mouvement bloquant (défaut)
+            force: Si True, force le mouvement même si déjà fermé (utile pour calibration)
         """
         if parallel:
-            self._start_finger_movement(name, "close")
+            self._start_finger_movement(name, "close", force=force)
         else:
-            self._move_finger_blocking(name, "close")
+            self._move_finger_blocking(name, "close", force=force)
     
-    def _start_finger_movement(self, name: str, action: str) -> None:
+    def _start_finger_movement(self, name: str, action: str, force: bool = False) -> None:
         """
         Démarre un mouvement de doigt dans un thread séparé.
         Si un mouvement est déjà en cours pour ce doigt, l'annule d'abord.
@@ -249,7 +256,7 @@ class HandController:
         # Créer et démarrer le nouveau thread
         thread = threading.Thread(
             target=self._move_finger_thread,
-            args=(name, action),
+            args=(name, action, force),
             daemon=True,
             name=f"finger_{name}_{action}"
         )
