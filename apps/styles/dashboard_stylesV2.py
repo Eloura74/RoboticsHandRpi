@@ -310,42 +310,103 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 const MODEL_PATH = '/assets/main_fusion.glb';
 const PALETTE = {
     cyanBright: 0x00ffff,
-    cyanDeep: 0x004488,
-    magenta: 0xff0088,
-    bgDark: 0x020408
+    cyanDeep:   0x004488,
+    magenta:    0xff0088,
+    bgDark:     0x020408,
 };
 
 let camera, scene, renderer, controls, composer;
-let fingers = { pouce: { segments: [], joints: [] }, index: { segments: [], joints: [] }, majeur: { segments: [], joints: [] }, annulaire: { segments: [], joints: [] }, auriculaire: { segments: [], joints: [] } };
+
+let fingers = {
+    pouce:       { segments: [], joints: [] },
+    index:       { segments: [], joints: [] },
+    majeur:      { segments: [], joints: [] },
+    annulaire:   { segments: [], joints: [] },
+    auriculaire: { segments: [], joints: [] },
+};
+
 let palmMesh = null;
-let targetAngles = { pouce: 0, index: 0, majeur: 0, annulaire: 0, auriculaire: 0 };
+
+let targetAngles  = { pouce: 0, index: 0, majeur: 0, annulaire: 0, auriculaire: 0 };
 let currentAngles = { pouce: 0, index: 0, majeur: 0, annulaire: 0, auriculaire: 0 };
 
-// --- MATERIAUX ---
+
+// ---------------------------------------------------------------------
+// MATERIAUX : doigts très lumineux, paume sombre et en retrait
+// ---------------------------------------------------------------------
+
+// Doigts : holographiques, transparents, très “néon”
 const matHoloFingers = new THREE.MeshPhysicalMaterial({
-    color: 0x000000, emissive: PALETTE.cyanDeep, emissiveIntensity: 0.5,
-    metalness: 0.8, roughness: 0.1, transmission: 0.6, opacity: 0.4, transparent: true, side: THREE.DoubleSide, depthWrite: false
-});
-const matSolidPalm = new THREE.MeshPhysicalMaterial({
-    color: PALETTE.cyanDeep, emissive: PALETTE.cyanDeep, emissiveIntensity: 0.2,
-    metalness: 0.7, roughness: 0.4, transmission: 0.0, opacity: 0.95, transparent: false, side: THREE.DoubleSide
-});
-const matWire = new THREE.MeshBasicMaterial({
-    color: PALETTE.cyanBright, wireframe: true, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
+    color: 0x000000,
+    emissive: PALETTE.cyanDeep,
+    emissiveIntensity: 0.6,
+    metalness: 0.85,
+    roughness: 0.1,
+    transmission: 0.7,
+    opacity: 0.45,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false,
 });
 
+// Paume : bloc sombre, peu lumineux
+const matSolidPalm = new THREE.MeshPhysicalMaterial({
+    color: 0x001018,          // bleu-vert très foncé
+    emissive: 0x001822,
+    emissiveIntensity: 0.08,  // presque pas de glow
+    metalness: 0.4,
+    roughness: 0.8,
+    transmission: 0.0,
+    opacity: 0.9,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: true,
+});
+
+// Wireframe des doigts : bien visible
+const matWire = new THREE.MeshBasicMaterial({
+    color: PALETTE.cyanBright,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.7,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+});
+
+// Wireframe de la paume : discret
+const matWirePalm = new THREE.MeshBasicMaterial({
+    color: 0x006688,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.18,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+});
+
+
+// ---------------------------------------------------------------------
+// INIT
+// ---------------------------------------------------------------------
 function init() {
     const container = document.getElementById('canvas-container');
     if (!container) { setTimeout(init, 100); return; }
 
     scene = new THREE.Scene();
-    // Pas de background color ici, c'est le CSS qui gère la grille
     scene.fog = new THREE.FogExp2(0x000000, 0.02);
 
-    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(
+        45,
+        container.clientWidth / container.clientHeight,
+        0.1,
+        1000,
+    );
     camera.position.set(0, 5, 45);
 
-    renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: "high-performance" });
+    renderer = new THREE.WebGLRenderer({
+        antialias: false,
+        alpha: true,
+        powerPreference: 'high-performance',
+    });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -354,16 +415,25 @@ function init() {
     container.appendChild(renderer.domElement);
 
     scene.add(new THREE.AmbientLight(0x222222));
+
     const lightMain = new THREE.PointLight(PALETTE.cyanBright, 3, 100);
     lightMain.position.set(20, 30, 20);
     scene.add(lightMain);
+
     const lightRim = new THREE.PointLight(PALETTE.magenta, 2, 80);
     lightRim.position.set(-20, -10, 10);
     scene.add(lightRim);
 
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(container.clientWidth, container.clientHeight), 0.2, 0.3, 0.2));
+    composer.addPass(
+        new UnrealBloomPass(
+            new THREE.Vector2(container.clientWidth, container.clientHeight),
+            0.2,
+            0.3,
+            0.2,
+        ),
+    );
     composer.addPass(new OutputPass());
 
     loadFusionModel();
@@ -373,197 +443,319 @@ function init() {
     controls.autoRotate = false;
 
     window.addEventListener('resize', onWindowResize);
+
     animate();
 }
 
 function onWindowResize() {
     const container = document.getElementById('canvas-container');
+    if (!container) return;
+
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
+
     renderer.setSize(container.clientWidth, container.clientHeight);
     composer.setSize(container.clientWidth, container.clientHeight);
 }
 
+
+// ---------------------------------------------------------------------
+// CHARGEMENT DU MODELE
+// ---------------------------------------------------------------------
 function loadFusionModel() {
     const loader = new GLTFLoader();
-    loader.load(MODEL_PATH, (gltf) => {
-        const model = gltf.scene;
-        const meshesToProcess = [];
-        model.traverse((child) => { if (child.isMesh) meshesToProcess.push(child); });
 
-        meshesToProcess.forEach((child) => {
-            const name = child.name.toLowerCase();
-            if (name.includes('paume') || name.includes('palm')) {
-                palmMesh = child;
-                child.material = matSolidPalm;
-            } else {
-                child.material = matHoloFingers;
-            }
-            child.add(new THREE.Mesh(child.geometry, matWire));
+    loader.load(
+        MODEL_PATH,
+        (gltf) => {
+            const model = gltf.scene;
 
-            const m = name.match(/(pouce|index|majeur|annulaire|auriculaire)_?(\d+)?/);
-            if (m) {
-                const fingerName = m[1];
-                const order = m[2] ? parseInt(m[2]) : 0;
-                fingers[fingerName].segments.push({ mesh: child, order });
-            }
-        });
+            const meshesToProcess = [];
+            model.traverse((child) => {
+                if (child.isMesh) meshesToProcess.push(child);
+            });
 
-        model.updateWorldMatrix(true, true);
-        buildFingerHierarchy(model);
+            meshesToProcess.forEach((child) => {
+                const name = child.name.toLowerCase();
 
-        const box = new THREE.Box3().setFromObject(model);
-        model.position.sub(box.getCenter(new THREE.Vector3()));
-        const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
-        model.scale.setScalar(15.0 / maxDim);
-        model.rotation.x = -Math.PI / 2;
+                if (name.includes('paume') || name.includes('palm')) {
+                    // Paume sombre + wire discret
+                    palmMesh = child;
+                    child.material = matSolidPalm;
 
-        scene.add(model);
-        document.getElementById('loading-msg').style.display = 'none';
-    }, undefined, (e) => {
-        console.error(e);
-        document.getElementById('loading-msg').innerHTML = 'ERREUR: ' + e.message;
-    });
+                    const wirePalm = new THREE.Mesh(child.geometry, matWirePalm);
+                    child.add(wirePalm);
+                } else {
+                    // Doigts : matériau holographique + wireframe lumineux
+                    child.material = matHoloFingers;
+
+                    const wire = new THREE.Mesh(child.geometry, matWire);
+                    child.add(wire);
+                }
+
+                const m = name.match(
+                    /(pouce|index|majeur|annulaire|auriculaire)_?(\d+)?/,
+                );
+                if (m) {
+                    const fingerName = m[1];
+                    const order = m[2] ? parseInt(m[2]) : 0;
+                    fingers[fingerName].segments.push({ mesh: child, order });
+                }
+            });
+
+            model.updateWorldMatrix(true, true);
+
+            buildFingerHierarchy(model);
+
+            // centrage & scale
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+
+            model.position.sub(center);
+            model.scale.setScalar(15.0 / maxDim);
+            model.rotation.x = -Math.PI / 2;
+
+            scene.add(model);
+
+            const loading = document.getElementById('loading-msg');
+            if (loading) loading.style.display = 'none';
+        },
+        undefined,
+        (e) => {
+            console.error(e);
+            const loading = document.getElementById('loading-msg');
+            if (loading) loading.innerHTML = 'ERREUR: ' + e.message;
+        },
+    );
 }
 
+
+// ---------------------------------------------------------------------
+// GEOMETRIE / HIÉRARCHIE
+// ---------------------------------------------------------------------
 function computeJointPosition(parentMesh, childMesh) {
     const parentBox = new THREE.Box3().setFromObject(parentMesh);
+    const childBox = new THREE.Box3().setFromObject(childMesh);
+
     const parentCenter = parentBox.getCenter(new THREE.Vector3());
-    const childCenter = new THREE.Box3().setFromObject(childMesh).getCenter(new THREE.Vector3());
+    const childCenter = childBox.getCenter(new THREE.Vector3());
+
     let dir = childCenter.clone().sub(parentCenter);
-    dir.lengthSq() === 0 ? dir.set(0, 1, 0) : dir.normalize();
+    if (dir.lengthSq() === 0) dir.set(0, 1, 0);
+    else dir.normalize();
+
     const halfSize = parentBox.getSize(new THREE.Vector3()).multiplyScalar(0.5);
-    const absDir = new THREE.Vector3(Math.abs(dir.x), Math.abs(dir.y), Math.abs(dir.z));
+    const absDir = new THREE.Vector3(
+        Math.abs(dir.x),
+        Math.abs(dir.y),
+        Math.abs(dir.z),
+    );
+
     let offset = new THREE.Vector3();
-    if (absDir.y >= absDir.x && absDir.y >= absDir.z) offset.set(0, Math.sign(dir.y) * halfSize.y, 0);
-    else if (absDir.x >= absDir.z) offset.set(Math.sign(dir.x) * halfSize.x, 0, 0);
-    else offset.set(0, 0, Math.sign(dir.z) * halfSize.z);
+    if (absDir.y >= absDir.x && absDir.y >= absDir.z) {
+        offset.set(0, Math.sign(dir.y) * halfSize.y, 0);
+    } else if (absDir.x >= absDir.z) {
+        offset.set(Math.sign(dir.x) * halfSize.x, 0, 0);
+    } else {
+        offset.set(0, 0, Math.sign(dir.z) * halfSize.z);
+    }
+
     return parentCenter.add(offset);
 }
 
 function buildFingerHierarchy(model) {
     const baseCenters = {};
+
     for (const fName in fingers) {
-        const baseSeg = fingers[fName].segments.find((s) => s.order === 1 || s.order === 0);
-        if (baseSeg) baseCenters[fName] = new THREE.Box3().setFromObject(baseSeg.mesh).getCenter(new THREE.Vector3());
+        const baseSeg = fingers[fName].segments.find(
+            (s) => s.order === 1 || s.order === 0,
+        );
+        if (baseSeg) {
+            const box = new THREE.Box3().setFromObject(baseSeg.mesh);
+            baseCenters[fName] = box.getCenter(new THREE.Vector3());
+        }
     }
+
     let palmNormal = new THREE.Vector3(0, 0, 1);
-    const iC = baseCenters['index'], mC = baseCenters['majeur'], aC = baseCenters['annulaire'];
-    if (iC && mC && aC) palmNormal = iC.clone().sub(mC).cross(aC.clone().sub(mC)).normalize();
+    const iC = baseCenters['index'];
+    const mC = baseCenters['majeur'];
+    const aC = baseCenters['annulaire'];
+
+    if (iC && mC && aC) {
+        const v1 = iC.clone().sub(mC);
+        const v2 = aC.clone().sub(mC);
+        palmNormal = v1.cross(v2).normalize();
+    }
     if (!Number.isFinite(palmNormal.x)) palmNormal.set(0, 0, 1);
 
     for (const fName in fingers) {
         const finger = fingers[fName];
         if (finger.segments.length === 0) continue;
+
         finger.segments.sort((a, b) => a.order - b.order);
+
         for (let i = 0; i < finger.segments.length; i++) {
             const segMesh = finger.segments[i].mesh;
-            const parentMesh = i === 0 ? (palmMesh || segMesh) : finger.segments[i - 1].mesh;
+            const parentMesh =
+                i === 0 ? (palmMesh || segMesh) : finger.segments[i - 1].mesh;
+
             const joint = new THREE.Object3D();
             joint.name = `${fName}_joint_${i + 1}`;
             joint.position.copy(computeJointPosition(parentMesh, segMesh));
+
             model.add(joint);
             joint.attach(segMesh);
-            if (i > 0) finger.joints[i - 1].attach(joint);
 
-            const parentCenter = new THREE.Box3().setFromObject(parentMesh).getCenter(new THREE.Vector3());
-            const childCenter = new THREE.Box3().setFromObject(segMesh).getCenter(new THREE.Vector3());
+            if (i > 0) {
+                finger.joints[i - 1].attach(joint);
+            }
+
+            const parentCenter = new THREE.Box3()
+                .setFromObject(parentMesh)
+                .getCenter(new THREE.Vector3());
+            const childCenter = new THREE.Box3()
+                .setFromObject(segMesh)
+                .getCenter(new THREE.Vector3());
+
             let dir = childCenter.clone().sub(parentCenter);
-            dir.lengthSq() === 0 ? dir.set(0, 1, 0) : dir.normalize();
+            if (dir.lengthSq() === 0) dir.set(0, 1, 0);
+            else dir.normalize();
+
             let hingeWorld = palmNormal.clone().cross(dir).normalize();
-            if (!Number.isFinite(hingeWorld.x)) hingeWorld.set(1, 0, 0);
-            const tmp = joint.worldToLocal(joint.position.clone().add(hingeWorld));
-            joint.userData.hingeAxis = tmp.sub(joint.position).normalize();
+            if (
+                !Number.isFinite(hingeWorld.x) ||
+                !Number.isFinite(hingeWorld.y) ||
+                !Number.isFinite(hingeWorld.z)
+            ) {
+                hingeWorld.set(1, 0, 0);
+            }
+
+            const tmp = joint.worldToLocal(
+                joint.position.clone().add(hingeWorld),
+            );
+            const hingeLocal = tmp.sub(joint.position).normalize();
+
+            joint.userData.hingeAxis = hingeLocal;
             joint.userData.baseQuat = joint.quaternion.clone();
+
             finger.joints.push(joint);
         }
     }
 }
 
+
+// ---------------------------------------------------------------------
+// ANIMATION
+// ---------------------------------------------------------------------
 const _tmpQuat = new THREE.Quaternion();
 
 function animate() {
     requestAnimationFrame(animate);
+
     const smooth = 0.15;
     for (const key in targetAngles) {
         currentAngles[key] += (targetAngles[key] - currentAngles[key]) * smooth;
     }
+
     ['index', 'majeur', 'annulaire', 'auriculaire'].forEach((name) => {
         const val = currentAngles[name];
-        fingers[name].joints.forEach((joint, idx) => {
+        const finger = fingers[name];
+
+        finger.joints.forEach((joint, idx) => {
             const axis = joint.userData.hingeAxis;
             if (!axis) return;
-            const angle = val * (-Math.PI / 2.2) * (1.0 - idx * 0.25);
+
+            const maxAngle = -Math.PI / 2.2;
+            const factor = 1.0 - idx * 0.25;
+
+            const angle = val * maxAngle * factor;
+
             joint.quaternion.copy(joint.userData.baseQuat);
             _tmpQuat.setFromAxisAngle(axis, angle);
             joint.quaternion.multiply(_tmpQuat);
         });
     });
+
     const tVal = currentAngles['pouce'];
     fingers['pouce'].joints.forEach((joint, idx) => {
         const axis = joint.userData.hingeAxis;
         if (!axis) return;
-        const angle = tVal * (-Math.PI / 3.0) * (1.0 - idx * 0.2);
+
+        const maxAngle = -Math.PI / 3.0;
+        const factor = 1.0 - idx * 0.2;
+
+        const angle = tVal * maxAngle * factor;
+
         joint.quaternion.copy(joint.userData.baseQuat);
         _tmpQuat.setFromAxisAngle(axis, angle);
         joint.quaternion.multiply(_tmpQuat);
     });
+
     controls.update();
     if (composer) composer.render();
 }
 
-// --- FONCTIONS INTERFACE JS (APPELÉES PAR PYTHON) ---
 
-// 1. Mise à jour des valeurs (Barres + 3D)
+// ---------------------------------------------------------------------
+// API JS APPELÉE PAR PYTHON
+// ---------------------------------------------------------------------
 window.updateHandData = function (jsonStr) {
     try {
         const data = JSON.parse(jsonStr);
-        // Mise à jour 3D
+
         if (data.index !== undefined) targetAngles.index = data.index;
         if (data.majeur !== undefined) targetAngles.majeur = data.majeur;
         if (data.annulaire_auriculaire !== undefined) {
             targetAngles.annulaire = data.annulaire_auriculaire;
             targetAngles.auriculaire = data.annulaire_auriculaire;
         }
-        if (data.pouce_articulation !== undefined) targetAngles.pouce = data.pouce_articulation;
+        if (data.pouce_articulation !== undefined) {
+            targetAngles.pouce = data.pouce_articulation;
+        }
 
-        // Mise à jour Barres Télémétrie
-        updateBar('pouce', targetAngles.pouce);
-        updateBar('index', targetAngles.index);
-        updateBar('majeur', targetAngles.majeur);
-        updateBar('annulaire', targetAngles.annulaire);
+        updateBar('pouce',       targetAngles.pouce);
+        updateBar('index',       targetAngles.index);
+        updateBar('majeur',      targetAngles.majeur);
+        updateBar('annulaire',   targetAngles.annulaire);
         updateBar('auriculaire', targetAngles.auriculaire);
-
-    } catch (e) {}
+    } catch (e) {
+        console.error('updateHandData ERROR:', e, jsonStr);
+    }
 };
 
 function updateBar(id, val) {
     const pct = Math.min(Math.max(val * 100, 0), 100);
-    const bar = document.getElementById(`bar-${id}`);
-    const txt = document.getElementById(`txt-${id}`);
-    if(bar) bar.style.width = pct + '%';
-    if(txt) txt.innerText = Math.round(pct) + '%';
+    const bar = document.getElementById('bar-' + id);
+    const txt = document.getElementById('txt-' + id);
+    if (bar) bar.style.width = pct + '%';
+    if (txt) txt.innerText = Math.round(pct) + '%';
 }
 
-// 2. Gestion du Terminal
-window.addSystemLog = function(msg, type='sys') {
+
+// ---------------------------------------------------------------------
+// LOG TERMINAL
+// ---------------------------------------------------------------------
+window.addSystemLog = function (msg, type = 'sys') {
     const term = document.getElementById('terminal-content');
-    if(!term) return;
-    
+    if (!term) return;
+
     const div = document.createElement('div');
     div.className = 'log-line log-' + type;
-    
-    // Timestamp rapide
+
     const now = new Date();
-    const time = now.getHours().toString().padStart(2,'0') + ':' + 
-                 now.getMinutes().toString().padStart(2,'0') + ':' + 
-                 now.getSeconds().toString().padStart(2,'0');
-    
-    div.innerText = `[${time}] ${msg}`;
+    const time =
+        now.getHours().toString().padStart(2, '0') +
+        ':' +
+        now.getMinutes().toString().padStart(2, '0') +
+        ':' +
+        now.getSeconds().toString().padStart(2, '0');
+
+    div.innerText = '[' + time + '] ' + msg;
     term.appendChild(div);
-    
-    // Auto-scroll
-    if(term.childNodes.length > 8) {
+
+    if (term.childNodes.length > 8) {
         term.removeChild(term.firstChild);
     }
 };

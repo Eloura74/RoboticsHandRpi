@@ -31,7 +31,6 @@ except ImportError:
         def shutdown(self): pass
 
 try:
-    # On importe bien le style V7 (contenu dans le fichier dashboard_stylesV2.py)
     from apps.styles.dashboard_stylesV2 import CSS_STYLE, HAND_3D_STRUCTURE, HAND_3D_JS
 except ImportError:
     print("[ERROR] Cannot import dashboard styles")
@@ -85,6 +84,7 @@ def signal_handler(signum, frame):
     app.shutdown()
     sys.exit(0)
 
+# Le thread receiver_thread reste inchangé
 def receiver_thread():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -95,6 +95,7 @@ def receiver_thread():
         sock.setblocking(False)
         print(f"[UDP] Thread UDP démarré - écoute sur {UDP_IP}:{UDP_PORT}")
         print(f"[UDP] IP locale du Raspberry Pi: {LOCAL_IP}")
+        print(f"[UDP] Le PC doit envoyer les données UDP à: {LOCAL_IP}:{UDP_PORT}")
     except Exception as e:
         print(f"[ERROR] Impossible de démarrer le thread UDP: {e}")
         return
@@ -124,6 +125,7 @@ def receiver_thread():
             
             if now - t0 > 1.0:
                 with state_lock: state['fps'] = packet_cnt
+                print(f"[UDP] {packet_cnt} paquets/sec reçus (total: {rx_count})")
                 packet_cnt = 0
                 t0 = now
             try:
@@ -131,16 +133,17 @@ def receiver_thread():
                 with state_lock:
                     if not state['simu_mode']:
                         if not state['udp_connected']:
-                            print(f"[UDP] CONNEXION ÉTABLIE")
+                            print(f"[UDP] CONNEXION ÉTABLIE - Réception de données depuis le PC")
                         state['udp_connected'] = True
                         state['packet_count'] += 1
                         for f in FINGERS:
                             if f in msg:
                                 state['values'][f] = max(0.0, min(1.0, float(msg[f])))
             except Exception as e:
-                pass
+                print(f"[UDP] Erreur de parsing: {e}")
         time.sleep(0.001)
 
+# Le thread hardware_thread reste inchangé
 def hardware_thread(ctrl):
     logical = {f: 'open' for f in FINGERS}
     while True:
@@ -163,7 +166,11 @@ def hardware_thread(ctrl):
         time.sleep(0.05)
 
 # --------------------------------------------------------------------
-# UI PRINCIPALE
+# 4. RESSOURCES GRAPHIQUES (Inchangé)
+# --------------------------------------------------------------------
+
+# --------------------------------------------------------------------
+# 5. UI PRINCIPALE (Mise à jour du titre)
 # --------------------------------------------------------------------
 def build_ui():
     ui.add_head_html(CSS_STYLE)
@@ -172,8 +179,8 @@ def build_ui():
         with ui.row().classes('items-center gap-3'):
             ui.icon('hub', color='cyan-400').classes('text-2xl')
             with ui.column().classes('gap-0'):
-                ui.label('NEURO-LINK // SYSTEM V7.0').classes('text-sm sm:text-lg text-cyan-400 font-bold tracking-widest')
-                ui.label('FUSION 360 • MESH DRIVER').classes('text-[10px] text-gray-400 tracking-wider')
+                ui.label('NEURO-LINK // SYSTEM V2.0').classes('text-sm sm:text-lg text-cyan-400 font-bold tracking-widest') # Titre V2.0
+                ui.label('ASSET CORE • OBJ IMPORT').classes('text-[10px] text-gray-400 tracking-wider') # Sous-titre
         
         status_label = ui.label('INIT').classes('text-xs px-3 py-1 bg-cyan-900/40 text-cyan-300 border border-cyan-500 rounded font-bold')
 
@@ -194,7 +201,6 @@ def build_ui():
                 ui.button("STOP URGENCE", on_click=lambda: controller.open_hand()).classes('w-full danger-btn h-12 mt-auto')
 
         with ui.card().classes('flex-1 h-full hud-panel p-0 overflow-hidden relative bg-black'):
-            # ATTENTION: sanitize=False est vital
             ui.html(HAND_3D_STRUCTURE, sanitize=False).classes('w-full h-full')
             ui.add_body_html(HAND_3D_JS)
 
@@ -203,6 +209,9 @@ def build_ui():
     def update_loop():
         try:
             loop_count[0] += 1
+            if loop_count[0] % 20 == 0:
+                print(f"[DEBUG] update_loop appelé {loop_count[0]} fois")
+            
             with state_lock:
                 if state['simu_mode']:
                     t = time.time()
@@ -211,13 +220,17 @@ def build_ui():
                 connected = state['udp_connected'] or state['simu_mode']
                 fps = state['fps']
 
+            if loop_count[0] % 20 == 0:
+                print(f"[DEBUG] vals={vals}, connected={connected}, fps={fps}")
+
             json_data = json.dumps(vals)
-            ui.run_javascript(f"try {{ if(typeof window.updateHandData === 'function') window.updateHandData('{json_data}'); }} catch(e) {{ }}")
+            ui.run_javascript(f"try {{ if(typeof window.updateHandData === 'function') window.updateHandData('{json_data}'); }} catch(e) {{ console.error('updateHandData error:', e); }}")
 
             status_label.text = f"ONLINE ({fps} TPS)" if connected else "OFFLINE"
             status_label.classes(replace='text-xs px-3 py-1 bg-green-900/40 text-green-300 border border-green-500' if connected else 'text-xs px-3 py-1 bg-red-900/40 text-red-500 border border-red-500')
         except Exception as e:
             print(f"[ERROR] update_loop: {e}")
+            traceback.print_exc()
 
     ui.timer(0.05, update_loop)
 
@@ -234,18 +247,17 @@ if __name__ in {"__main__", "__mp_main__"}:
     threading.Thread(target=hardware_thread, args=(controller,), daemon=True).start()
     time.sleep(0.5)
 
-    # --- CONFIGURATION ASSETS ---
+    # --- NOUVEAU : Exposer le dossier assets pour le chargement 3D ---
     ASSETS_DIR = BASE_DIR / 'assets'
     if not ASSETS_DIR.exists():
-        print(f"[WARNING] Le dossier n'existe pas: {ASSETS_DIR}")
-        ASSETS_DIR.mkdir(exist_ok=True)
+        print(f"[WARNING] Le dossier '/assets' n'existe pas. Créez-le et placez-y main_modele.obj.")
+        ASSETS_DIR.mkdir(exist_ok=True) # Crée le dossier s'il n'existe pas
     
-    # On expose le dossier assets pour que le navigateur trouve /assets/main_fusion.glb
     app.add_static_files('/assets', ASSETS_DIR)
-    print(f"[ASSET] Dossier '/assets' exposé")
+    print(f"[ASSET] Dossier '/assets' exposé pour le chargement 3D.")
 
     @ui.page('/')
     def index():
         build_ui()
     
-    ui.run(host='0.0.0.0', port=8080, dark=True, reload=False, title='NEURO-LINK V7.0')
+    ui.run(host='0.0.0.0', port=8080, dark=True, reload=False, title='NEURO-LINK V2.0')
