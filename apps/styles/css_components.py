@@ -1,0 +1,420 @@
+# --------------------------------------------------------------------
+# CSS COMPONENTS - Styles des composants UI
+# --------------------------------------------------------------------
+"""
+Ce module contient tous les styles CSS des composants d'interface :
+- Boutons (cyber-btn, danger-btn, sim-btn, thumb-btn, emergency-btn)
+- Cadre vidéo HUD (video-hud-frame, coins, scan-line)
+- Panneaux HUD (hud-panel, hud-chip, hud-divider)
+- Télémétrie (barres de progression des doigts)
+- Terminal de logs
+"""
+
+CSS_COMPONENTS = '''
+<style>
+    /* ================================================================
+       BOUTONS CYBER
+       ================================================================ */
+    .cyber-btn {
+        background: linear-gradient(90deg, transparent 0%, rgba(0, 243, 255, 0.1) 50%, transparent 100%);
+        border: 1px solid rgba(0, 243, 255, 0.4);
+        color: var(--neon-cyan);
+        font-family: 'Orbitron';
+        font-size: 12px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cyber-btn::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0,243,255,0.4), transparent);
+        transition: 0.5s;
+    }
+
+    .cyber-btn:hover::before { left: 100%; }
+
+    .cyber-btn:hover {
+        border-color: var(--neon-cyan);
+        background: rgba(0, 243, 255, 0.2);
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+    }
+
+    /* ================================================================
+       BOUTONS DANGER
+       ================================================================ */
+    .danger-btn {
+        background: rgba(40, 0, 0, 0.5);
+        border: 1px solid var(--neon-red);
+        color: var(--neon-red);
+        font-family: 'Orbitron';
+        box-shadow: inset 0 0 10px rgba(255,0,0,0.1);
+    }
+
+    .danger-btn:hover {
+        background: rgba(100, 0, 0, 0.6);
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+    }
+
+    /* ================================================================
+       CADRE VIDÉO HUD (Style Terminator)
+       ================================================================ */
+    .video-hud-frame {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 20;
+        border: 1px solid rgba(0, 243, 255, 0.3);
+        clip-path: polygon(
+            10px 0, 100% 0,
+            100% calc(100% - 10px), calc(100% - 10px) 100%,
+            0 100%, 0 10px
+        );
+    }
+
+    .video-hud-corner {
+        position: absolute;
+        width: 20px; height: 20px;
+        border: 2px solid var(--neon-cyan);
+        opacity: 0.8;
+    }
+
+    .vh-tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+    .vh-tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+    .vh-bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+    .vh-br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+    .scan-line {
+        position: absolute;
+        width: 100%; height: 2px;
+        background: rgba(0, 243, 255, 0.3);
+        top: 0;
+        animation: scan 4s linear infinite;
+        opacity: 0.7;
+    }
+
+    @keyframes scan { 0% {top:0;} 50% {opacity: 1;} 100% {top:100%; opacity: 0.7;} }
+
+    /* ================================================================
+       TÉLÉMÉTRIE - Barres de progression servos
+       ================================================================ */
+    #telemetry-panel {
+        position: absolute;
+        top: 20%;
+        right: 40px;
+        width: 220px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        z-index: 5;
+        background: rgba(0,0,0,0.3);
+        padding: 20px;
+        border-left: 2px solid rgba(0,243,255,0.2);
+        backdrop-filter: blur(2px);
+    }
+
+    .telemetry-title {
+        font-family: 'Orbitron';
+        color: rgba(255,255,255,0.7);
+        font-size: 10px;
+        letter-spacing: 2px;
+        border-bottom: 1px solid rgba(0,243,255,0.2);
+        padding-bottom: 5px;
+        margin-bottom: 5px;
+    }
+
+    .finger-meter {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .finger-info {
+        display: flex;
+        justify-content: space-between;
+        font-family: 'Rajdhani';
+        font-size: 14px;
+        color: var(--neon-cyan);
+    }
+
+    .bar-track {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(0, 243, 255, 0.3);
+        transform: skewX(-20deg);
+        overflow: hidden;
+    }
+
+    .bar-fill {
+        height: 100%;
+        width: 0%;
+        background: repeating-linear-gradient(
+            90deg,
+            var(--neon-cyan),
+            var(--neon-cyan) 4px,
+            transparent 4px,
+            transparent 6px
+        );
+        box-shadow: 0 0 10px var(--neon-cyan);
+        transition: width 0.1s linear;
+    }
+
+    /* ================================================================
+       TERMINAL DE LOGS
+       ================================================================ */
+    #terminal-panel {
+        position: absolute;
+        bottom: 30px;
+        right: 40px;
+        width: 350px;
+        height: 150px;
+        background: rgba(0, 5, 10, 0.8);
+        border: 1px solid rgba(0, 243, 255, 0.3);
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        padding: 10px;
+        overflow-y: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        z-index: 5;
+    }
+
+    #terminal-header {
+        position: absolute;
+        top: 0; left: 0; width: 100%;
+        background: rgba(0, 243, 255, 0.1);
+        color: var(--neon-cyan);
+        font-size: 9px;
+        padding: 2px 5px;
+        font-family: 'Orbitron';
+        letter-spacing: 1px;
+    }
+
+    .log-line { margin: 2px 0; opacity: 0.8; }
+    .log-sys { color: #aaa; }
+    .log-servo { color: var(--neon-cyan); }
+    .log-warn { color: var(--neon-red); text-shadow: 0 0 2px red; }
+
+    /* ================================================================
+       PANNEAUX HUD
+       ================================================================ */
+    .hud-panel {
+        background: var(--glass-panel);
+        border: 1px solid rgba(0, 243, 255, 0.18);
+        box-shadow:
+            0 0 30px rgba(0, 0, 0, 0.9),
+            0 0 18px rgba(0, 243, 255, 0.15),
+            inset 0 0 20px rgba(0, 243, 255, 0.05);
+        border-radius: 10px;
+        backdrop-filter: blur(8px);
+    }
+
+    .hud-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .hud-section-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--neon-cyan);
+    }
+
+    .hud-section-caption {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.5);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .hud-chip {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 9px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 2px 10px;
+        border-radius: 9999px;
+        border: 1px solid rgba(0, 243, 255, 0.45);
+        background: radial-gradient(circle at 0% 0%, rgba(0,243,255,0.35), rgba(0,0,0,0.9));
+        color: var(--neon-cyan);
+        white-space: nowrap;
+    }
+
+    .hud-chip-warn {
+        border-color: var(--neon-red);
+        color: var(--neon-red);
+        background: radial-gradient(circle at 0% 0%, rgba(255,51,51,0.3), rgba(0,0,0,0.9));
+    }
+
+    .hud-mini-label {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(200, 230, 255, 0.6);
+    }
+
+    .hud-value-strong {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 10px;
+        letter-spacing: 1px;
+        color: var(--neon-cyan);
+    }
+
+    .hud-divider {
+        height: 1px;
+        width: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(0,243,255,0.7),
+            transparent
+        );
+        opacity: 0.5;
+        margin: 8px 0 6px 0;
+    }
+
+    /* ================================================================
+       BOUTONS DE CONTRÔLE (NiceGUI)
+       ================================================================ */
+    .control-btn {
+        border-radius: 10px !important;
+        border: 1px solid rgba(0, 243, 255, 0.55) !important;
+        background: radial-gradient(circle at 0% 0%, rgba(0,243,255,0.18), rgba(0,0,0,0.95)) !important;
+        box-shadow:
+            0 0 10px rgba(0, 243, 255, 0.25),
+            inset 0 0 10px rgba(0, 243, 255, 0.2);
+        text-align: left;
+    }
+
+    .control-btn .q-btn__content {
+        justify-content: space-between;
+        width: 100%;
+        font-family: 'Orbitron', sans-serif;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        font-size: 11px;
+        color: var(--neon-cyan);
+    }
+
+    .control-btn .q-icon {
+        font-size: 18px;
+        opacity: 0.85;
+    }
+
+    .control-btn::after {
+        content: '';
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        width: 36px;
+        height: 1px;
+        transform: translateY(-50%);
+        background: linear-gradient(90deg, rgba(0,243,255,0.0), rgba(0,243,255,0.8));
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    .control-btn:hover {
+        box-shadow:
+            0 0 16px rgba(0,243,255,0.6),
+            inset 0 0 12px rgba(0,243,255,0.25);
+        border-color: rgba(0, 243, 255, 0.9);
+    }
+
+    .sim-btn {
+        border-radius: 10px !important;
+        border: 1px dashed rgba(0, 243, 255, 0.6) !important;
+        background: radial-gradient(circle at 0% 0%, rgba(0,243,255,0.10), rgba(0,0,0,0.95)) !important;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 11px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .sim-btn .q-btn__content {
+        justify-content: center;
+        color: var(--neon-cyan);
+    }
+
+    .thumb-btn {
+        border-radius: 9999px !important;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* ================================================================
+       BOUTON D'URGENCE
+       ================================================================ */
+    .emergency-wrapper {
+        margin-top: auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding-top: 4px;
+    }
+
+    .emergency-ring {
+        position: relative;
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 120, 40, 0.45);
+        box-shadow:
+            0 0 25px rgba(255, 120, 40, 0.8),
+            0 0 60px rgba(255, 80, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle, rgba(255,140,40,0.1), rgba(0,0,0,0.95));
+    }
+
+    .emergency-ring::before {
+        content: '';
+        position: absolute;
+        inset: 12px;
+        border-radius: 50%;
+        border: 1px dashed rgba(255, 200, 150, 0.5);
+        opacity: 0.6;
+    }
+
+    .emergency-btn {
+        border-radius: 9999px !important;
+        width: 90px;
+        height: 90px;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 10px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        background: radial-gradient(circle, #ff6600, #7a0000) !important;
+        border: 2px solid rgba(255,230,200,0.9) !important;
+        color: #fff !important;
+        box-shadow:
+            0 0 25px rgba(255, 140, 40, 0.9),
+            inset 0 0 20px rgba(0,0,0,0.7);
+    }
+
+    .emergency-btn .q-btn__content {
+        flex-direction: column;
+    }
+
+    .emergency-btn:hover {
+        transform: scale(1.03);
+        box-shadow:
+            0 0 35px rgba(255, 180, 80, 1),
+            inset 0 0 20px rgba(0,0,0,0.8);
+    }
+</style>
+'''
