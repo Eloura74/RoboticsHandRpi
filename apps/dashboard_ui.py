@@ -30,9 +30,8 @@ def build_header():
     Returns:
         ui.label: Le label de statut pour mise à jour ultérieure.
     """
-    # reduire la hauteur du header
     with ui.row().classes(
-        'hud-header w-full h-[8vh] min-h-[60px] '
+        'hud-header w-full h-[3vh] min-h-[40px] '
         'items-center justify-between px-6 sm:px-8'
     ):
         # Logo et titre principal
@@ -43,6 +42,32 @@ def build_header():
                     .classes('text-sm sm:text-lg text-cyan-400 font-bold tracking-widest')
                 ui.label('NEURO-LINK // SYSTEM ONLINE') \
                     .classes('text-[10px] text-gray-400 tracking-wider')
+
+        # Animation Ligne de Vie (ECG - SVG)
+        with ui.element('div').classes('lifeline-container'):
+            ui.html('''
+                <svg class="ecg-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
+                    <path class="ecg-path" d="
+                        M0,50 L100,50 
+                        L110,50 L120,40 L130,60 L140,50 
+                        L150,50 L160,50 L165,40 L170,50 L180,50 L185,20 L190,80 L195,50 L205,50 
+                        L215,50 L220,40 L225,60 L235,50 
+                        L300,50
+                        L310,50 L320,40 L330,60 L340,50 
+                        L350,50 L360,50 L365,40 L370,50 L380,50 L385,20 L390,80 L395,50 L405,50 
+                        L415,50 L420,40 L425,60 L435,50 
+                        L500,50
+                        L510,50 L520,40 L530,60 L540,50 
+                        L550,50 L560,50 L565,40 L570,50 L580,50 L585,20 L590,80 L595,50 L605,50 
+                        L615,50 L620,40 L625,60 L635,50 
+                        L700,50
+                        L710,50 L720,40 L730,60 L740,50 
+                        L750,50 L760,50 L765,40 L770,50 L780,50 L785,20 L790,80 L795,50 L805,50 
+                        L815,50 L820,40 L825,60 L835,50 
+                        L1000,50
+                    " />
+                </svg>
+            ''', sanitize=False).classes('w-full h-full')
 
         # Badge de statut (ONLINE/OFFLINE)
         status_label = ui.label('INIT') \

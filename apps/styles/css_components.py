@@ -416,5 +416,44 @@ CSS_COMPONENTS = '''
             0 0 35px rgba(255, 180, 80, 1),
             inset 0 0 20px rgba(0,0,0,0.8);
     }
+
+    /* ================================================================
+       ANIMATION LIGNE DE VIE (HEADER - SVG)
+       ================================================================ */
+    .lifeline-container {
+        flex: 1;
+        height: 50px;
+        margin: 0 20px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        opacity: 0.9;
+    }
+
+    .ecg-svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    .ecg-path {
+        fill: none;
+        stroke: var(--neon-cyan);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: drop-shadow(0 0 4px var(--neon-cyan));
+        stroke-dasharray: 2000;
+        stroke-dashoffset: 2000;
+        animation: draw-ecg 6s linear infinite;
+    }
+
+    @keyframes draw-ecg {
+        0% { stroke-dashoffset: 2000; opacity: 0; }
+        5% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { stroke-dashoffset: 0; opacity: 0; }
+    }
 </style>
 '''
