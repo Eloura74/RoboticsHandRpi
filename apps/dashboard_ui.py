@@ -35,11 +35,19 @@ def build_header():
         'items-center justify-between px-6 sm:px-8'
     ):
         # Logo et titre principal
-        with ui.row().classes('items-center gap-3'):
-            ui.icon('hub', color='cyan-400').classes('text-2xl')
+        with ui.row().classes('items-center gap-4'):
+            # Logo SVG personnalisé (Nœud Neuronal Hexagonal)
+            ui.html('''
+                <svg class="logo-glow" width="32" height="32" viewBox="0 0 100 100" fill="none" stroke="#00f3ff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M50 20 L80 35 L80 65 L50 80 L20 65 L20 35 Z" />
+                    <circle cx="50" cy="50" r="12" fill="#00f3ff" fill-opacity="0.3" />
+                    <path d="M50 50 L50 20 M50 50 L80 65 M50 50 L20 65" stroke-width="4" opacity="0.8" />
+                </svg>
+            ''', sanitize=False)
+            
             with ui.column().classes('gap-0'):
                 ui.label('NEURO-HAND V1.0') \
-                    .classes('text-sm sm:text-lg text-cyan-400 font-bold tracking-widest')
+                    .classes('text-lg sm:text-xl text-cyan-400 font-black tracking-widest title-glow uppercase')
                 ui.label('NEURO-LINK // SYSTEM ONLINE') \
                     .classes('text-[10px] text-gray-400 tracking-wider')
 
@@ -124,44 +132,54 @@ def build_control_panel(controller, local_ip: str, udp_port: int):
         udp_port: Port UDP pour l'affichage.
     """
     with ui.card().classes(
-        'w-full flex-1 hud-panel px-4 pt-4 pb-3 flex flex-col gap-4'
+        'w-full flex-1 panel-3d-bg px-6 pt-6 pb-4 flex flex-col gap-5 items-center text-center relative overflow-hidden'
     ):
-        # En-tête : titre + badge LIVE LINK
-        with ui.row().classes('hud-panel-header'):
-            with ui.column().classes('gap-[2px]'):
-                ui.label('CONTROL NODES') \
-                    .classes('hud-section-title')
-                ui.label('HAND ACTUATOR BUS') \
-                    .classes('hud-section-caption')
-            with ui.row().classes('gap-2 items-center'):
-                ui.label('LIVE LINK') \
-                    .classes('hud-chip')
-        
-        # Infos de connexion UDP
-        with ui.row().classes('text-[10px] text-gray-300 justify-between'):
-            with ui.column().classes('gap-[1px]'):
-                ui.label('UDP ROUTE').classes('hud-mini-label')
-                ui.label(f'{local_ip}:{udp_port}') \
-                    .classes('hud-value-strong')
-            with ui.column().classes('gap-[1px] items-end'):
-                ui.label('MODE').classes('hud-mini-label')
-                ui.label('TRACKING').classes('hud-value-strong')
+        # HUD Overlay (Coins uniquement)
+        ui.html('''
+            <div class="hud-overlay">
+                <div class="hud-corner hud-tl"></div>
+                <div class="hud-corner hud-tr"></div>
+                <div class="hud-corner hud-bl"></div>
+                <div class="hud-corner hud-br"></div>
+            </div>
+        ''', sanitize=False)
 
-        ui.html('<div class="hud-divider"></div>', sanitize=False)
+        # En-tête : titre + badge LIVE LINK
+        with ui.column().classes('items-center gap-1 w-full z-20'):
+            ui.label('CONTROL NODES') \
+                .classes('hud-section-title text-lg')
+            ui.label('HAND ACTUATOR BUS') \
+                .classes('hud-section-caption')
+            ui.label('LIVE LINK') \
+                .classes('hud-chip mt-1')
+        
+        ui.html('<div class="w-full h-[1px] bg-cyan-900/50"></div>', sanitize=False)
+
+        # Infos de connexion UDP (Centré)
+        with ui.column().classes('items-center gap-2 w-full z-20'):
+            with ui.row().classes('gap-4 text-[10px] text-gray-300'):
+                with ui.column().classes('items-center gap-[1px]'):
+                    ui.label('UDP ROUTE').classes('hud-mini-label')
+                    ui.label(f'{local_ip}:{udp_port}') \
+                        .classes('hud-value-strong')
+                
+                with ui.column().classes('items-center gap-[1px]'):
+                    ui.label('MODE').classes('hud-mini-label')
+                    ui.label('TRACKING').classes('hud-value-strong')
 
         # Boutons principaux : OPEN / CLOSE / SIMULATION
-        with ui.column().classes('gap-2'):
+        with ui.column().classes('gap-3 w-full max-w-[220px] z-20'):
             ui.button(
                 'OPEN',
                 icon='pan_tool_alt',
                 on_click=lambda: controller.open_hand()
-            ).classes('w-full h-11 q-pa-sm control-btn cyber-btn')
+            ).classes('w-full h-12 cyber-btn-glitch cyber-btn-open text-base')
 
             ui.button(
                 'CLOSE',
                 icon='back_hand',
                 on_click=lambda: controller.close_hand()
-            ).classes('w-full h-11 q-pa-sm control-btn cyber-btn')
+            ).classes('w-full h-12 cyber-btn-glitch cyber-btn-close text-base')
 
             def toggle_sim():
                 """Bascule le mode simulation (génération sinusoïdale des valeurs)."""
@@ -172,34 +190,34 @@ def build_control_panel(controller, local_ip: str, udp_port: int):
                 'SIMULATION MODE',
                 icon='memory',
                 on_click=toggle_sim
-            ).classes('w-full h-11 q-pa-sm sim-btn')
+            ).classes('w-full h-12 cyber-btn-glitch cyber-btn-sim text-xs')
 
-        ui.html('<div class="hud-divider"></div>', sanitize=False)
+        ui.html('<div class="w-full h-[1px] bg-cyan-900/50"></div>', sanitize=False)
 
         # Section rotation pouce (servo MG90S)
-        with ui.column().classes('gap-1'):
-            ui.label('THUMB ROTATION (MG90S)') \
-                .classes('hud-mini-label')
-            ui.label('LINKED TO THUMB ARTICULATION CHANNEL') \
-                .classes('text-[9px] text-gray-400 tracking-[0.15em] uppercase')
+        with ui.column().classes('items-center gap-1 w-full z-20'):
+            ui.label('THUMB ROTATION') \
+                .classes('hud-mini-label text-cyan-300')
+            ui.label('MG90S ACTUATOR CHANNEL') \
+                .classes('text-[8px] text-gray-500 tracking-[0.2em] uppercase')
 
-        with ui.row().classes('w-full gap-2 mt-1'):
-            ui.button(
-                '⟲ -1°',
-                on_click=lambda: controller.thumb_rotation_step(-1),
-            ).classes('flex-1 h-8 cyber-btn thumb-btn')
-            ui.button(
-                '+1° ⟳',
-                on_click=lambda: controller.thumb_rotation_step(+1),
-            ).classes('flex-1 h-8 cyber-btn thumb-btn')
+            with ui.row().classes('w-full max-w-[220px] gap-2 mt-2'):
+                ui.button(
+                    '⟲ -1°',
+                    on_click=lambda: controller.thumb_rotation_step(-1),
+                ).classes('flex-1 h-10 thumb-actuator font-bold text-lg')
+                ui.button(
+                    '+1° ⟳',
+                    on_click=lambda: controller.thumb_rotation_step(+1),
+                ).classes('flex-1 h-10 thumb-actuator font-bold text-lg')
 
-        ui.button(
-            'CENTER THUMB',
-            on_click=lambda: controller.thumb_rotation_reset(),
-        ).classes('w-full h-8 mt-1 cyber-btn thumb-btn')
+            ui.button(
+                'CENTER THUMB',
+                on_click=lambda: controller.thumb_rotation_reset(),
+            ).classes('w-full max-w-[220px] h-8 mt-1 thumb-actuator font-bold text-xs')
 
         # Bouton d'urgence circulaire en bas du panneau
-        with ui.element('div').classes('emergency-wrapper'):
+        with ui.element('div').classes('emergency-wrapper mt-auto mb-2 z-20'):
             ui.button(
                 'EMERGENCY\nSTOP',
                 on_click=lambda: controller.stop_all(),
@@ -216,9 +234,29 @@ def build_3d_panel(hand_3d_structure: str, hand_3d_js: str):
         hand_3d_js: Code JavaScript pour l'animation 3D.
     """
     with ui.card().classes(
-        'flex-1 h-full hud-panel p-0 overflow-hidden relative bg-black'
+        'flex-1 h-full hud-panel p-0 overflow-hidden relative panel-3d-bg'
     ):
-        ui.html(hand_3d_structure, sanitize=False).classes('w-full h-full')
+        # Structure 3D (Canvas)
+        ui.html(hand_3d_structure, sanitize=False).classes('w-full h-full relative z-0')
+        
+        # Overlay HUD Futuriste
+        ui.html('''
+            <div class="hud-overlay">
+                <div class="hud-corner hud-tl"></div>
+                <div class="hud-corner hud-tr"></div>
+                <div class="hud-corner hud-bl"></div>
+                <div class="hud-corner hud-br"></div>
+                
+                <div class="hud-crosshair"></div>
+                <div class="hud-scan-line"></div>
+                
+                <div style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
+                            color: var(--neon-cyan); font-size: 10px; letter-spacing: 2px; opacity: 0.7;">
+                    SCANNING 3D OBJECT // LIVE FEED
+                </div>
+            </div>
+        ''', sanitize=False)
+
         ui.add_body_html(hand_3d_js)
 
 

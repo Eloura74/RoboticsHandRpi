@@ -455,5 +455,203 @@ CSS_COMPONENTS = '''
         90% { opacity: 1; }
         100% { stroke-dashoffset: 0; opacity: 0; }
     }
+
+    /* ================================================================
+       LOGO & TITRE ENHANCEMENTS
+       ================================================================ */
+    .logo-glow {
+        filter: drop-shadow(0 0 5px var(--neon-cyan));
+        animation: logo-pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes logo-pulse {
+        0%, 100% { filter: drop-shadow(0 0 5px var(--neon-cyan)); }
+        50% { filter: drop-shadow(0 0 12px var(--neon-cyan)); }
+    }
+
+    .title-glow {
+        text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
+        letter-spacing: 3px !important;
+    }
+
+    /* ================================================================
+       CONTROL PANEL STYLES
+       ================================================================ */
+    .tech-panel-bg {
+        background: 
+            linear-gradient(135deg, rgba(0, 20, 30, 0.9) 0%, rgba(0, 10, 15, 0.95) 100%),
+            repeating-linear-gradient(90deg, rgba(0, 243, 255, 0.03) 0px, rgba(0, 243, 255, 0.03) 1px, transparent 1px, transparent 20px),
+            repeating-linear-gradient(0deg, rgba(0, 243, 255, 0.03) 0px, rgba(0, 243, 255, 0.03) 1px, transparent 1px, transparent 20px);
+        border: 1px solid rgba(0, 243, 255, 0.2);
+        box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.05);
+        position: relative;
+    }
+    
+    .tech-panel-bg::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+        opacity: 0.5;
+    }
+
+    .cyber-btn-glitch {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: bold;
+        clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    }
+
+    .cyber-btn-glitch::after {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+        transform: rotate(45deg) translateY(-100%);
+        transition: transform 0.5s;
+    }
+
+    .cyber-btn-glitch:hover::after {
+        transform: rotate(45deg) translateY(100%);
+    }
+
+    .cyber-btn-open {
+        background: rgba(0, 243, 255, 0.1);
+        border: 1px solid rgba(0, 243, 255, 0.5);
+        color: var(--neon-cyan);
+    }
+    .cyber-btn-open:hover {
+        background: rgba(0, 243, 255, 0.2);
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+        text-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    .cyber-btn-close {
+        background: rgba(255, 0, 60, 0.1);
+        border: 1px solid rgba(255, 0, 60, 0.5);
+        color: #ff003c;
+    }
+    .cyber-btn-close:hover {
+        background: rgba(255, 0, 60, 0.2);
+        box-shadow: 0 0 15px rgba(255, 0, 60, 0.4);
+        text-shadow: 0 0 8px #ff003c;
+    }
+
+    .cyber-btn-sim {
+        background: rgba(138, 43, 226, 0.1);
+        border: 1px solid rgba(138, 43, 226, 0.5);
+        color: #8a2be2;
+    }
+    .cyber-btn-sim:hover {
+        background: rgba(138, 43, 226, 0.2);
+        box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+        text-shadow: 0 0 8px #8a2be2;
+    }
+
+    .thumb-actuator {
+        background: rgba(0, 20, 30, 0.8);
+        border: 1px solid rgba(0, 243, 255, 0.3);
+        color: var(--neon-cyan);
+        transition: all 0.2s;
+    }
+    .thumb-actuator:hover {
+        background: rgba(0, 243, 255, 0.2);
+        border-color: var(--neon-cyan);
+    }
+
+    .thumb-display {
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(0, 243, 255, 0.1);
+        color: var(--neon-cyan);
+        font-family: 'Courier New', monospace;
+        letter-spacing: 1px;
+    }
+
+    /* ================================================================
+       3D PANEL & HUD STYLES
+       ================================================================ */
+    .panel-3d-bg {
+        background-color: #000;
+        background-image: 
+            radial-gradient(circle at center, transparent 0%, #000 90%),
+            linear-gradient(0deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+        background-size: 100% 100%, 40px 40px, 40px 40px;
+        background-position: center, center, center;
+        position: relative;
+        box-shadow: inset 0 0 50px #000;
+    }
+
+    .hud-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        pointer-events: none; /* Let clicks pass through to 3D canvas */
+        z-index: 10;
+    }
+
+    .hud-corner {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        border: 2px solid var(--neon-cyan);
+        opacity: 0.6;
+        transition: all 0.3s;
+    }
+
+    .hud-tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+    .hud-tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+    .hud-bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+    .hud-br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+    .hud-crosshair {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 200px; height: 200px;
+        transform: translate(-50%, -50%);
+        border: 1px solid rgba(0, 243, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .hud-crosshair::before {
+        content: '';
+        width: 180px; height: 180px;
+        border: 1px dashed rgba(0, 243, 255, 0.3);
+        border-radius: 50%;
+        animation: spin-slow 20s linear infinite;
+    }
+
+    .hud-crosshair::after {
+        content: '';
+        width: 10px; height: 10px;
+        background: var(--neon-cyan);
+        border-radius: 50%;
+        box-shadow: 0 0 10px var(--neon-cyan);
+    }
+
+    .hud-scan-line {
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+        opacity: 0.3;
+        animation: scan-vertical 4s linear infinite;
+    }
+
+    @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes scan-vertical {
+        0% { top: 0%; opacity: 0; }
+        10% { opacity: 0.5; }
+        90% { opacity: 0.5; }
+        100% { top: 100%; opacity: 0; }
+    }
 </style>
 '''

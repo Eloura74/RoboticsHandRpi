@@ -51,7 +51,7 @@ const PALETTE = {
 // VARIABLES GLOBALES
 // =====================================================================
 let camera, scene, renderer, controls, composer;
-let particles, scannerRing;
+let particles;
 
 let fingers = {
     pouce:       { segments: [], joints: [] },
@@ -171,7 +171,6 @@ function init() {
 
     loadFusionModel();
     createParticles();
-    createScannerRing();
 
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -391,13 +390,7 @@ function createParticles() {
     scene.add(particles);
 }
 
-function createScannerRing() {
-    const geometry = new THREE.TorusGeometry(12, 0.05, 16, 100);
-    const material = new THREE.MeshBasicMaterial({ color: PALETTE.cyanBright, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-    scannerRing = new THREE.Mesh(geometry, material);
-    scannerRing.rotation.x = Math.PI / 2;
-    scene.add(scannerRing);
-}
+
 
 // =====================================================================
 // ANIMATION
@@ -451,10 +444,7 @@ function animate() {
         particles.rotation.x += 0.0005;
     }
 
-    if (scannerRing) {
-        scannerRing.rotation.z -= 0.005;
-        scannerRing.scale.setScalar(1 + Math.sin(Date.now() * 0.001) * 0.05);
-    }
+
 
     if (matHoloFingers) {
         matHoloFingers.emissiveIntensity = 0.6 + Math.sin(Date.now() * 0.003) * 0.2;
