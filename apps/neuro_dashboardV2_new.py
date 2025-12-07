@@ -160,11 +160,18 @@ if __name__ in {"__main__", "__mp_main__"}:
         build_ui()
 
     # Lancement du serveur NiceGUI
+    # Récupération de l'IP locale du RPi
+    local_ip = get_local_ip()
+    
     print(f"[WEB] Démarrage du serveur web sur le port {WEB_PORT}")
+    print(f"[WEB] 🌐 Ouvrir dans le navigateur : http://{local_ip}:{WEB_PORT}")
+    print(f"[WEB] ⚠️  N'utilisez PAS http://127.0.0.1:{WEB_PORT} (flux webcam ne fonctionnera pas)")
+    
     ui.run(
         host='0.0.0.0',
         port=WEB_PORT,
         dark=True,
         reload=False,
-        title='NEURO-LINK V2.0'
+        title='NEURO-LINK V2.0',
+        show=False  # Désactive l'ouverture automatique du navigateur
     )
