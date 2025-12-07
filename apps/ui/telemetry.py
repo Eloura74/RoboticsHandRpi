@@ -32,11 +32,11 @@ def build_telemetry_panel():
                         ui.label('UDP PACKETS/SEC').classes('hud-mini-label text-[10px]')
                         fps_label = ui.label('0').classes('text-5xl font-mono text-cyan-400 tracking-wider title-glow')
                         with ui.row().classes('gap-1 mt-1 items-center justify-center'):
-                            ui.html('<div class="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" style="box-shadow: 0 0 10px #00f3ff;"></div>', sanitize=False)
+                            ui.html('<div class="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" style="box-shadow: 0 0 10px #00f3ff;"></div>')
                             ui.label('ACTIVE').classes('text-[8px] text-cyan-400')
                     
                     # Diviseur vertical
-                    ui.html('<div class="w-[1px] h-16 bg-cyan-500/30" style="box-shadow: 0 0 5px rgba(0,243,255,0.3);"></div>', sanitize=False)
+                    ui.html('<div class="w-[1px] h-16 bg-cyan-500/30" style="box-shadow: 0 0 5px rgba(0,243,255,0.3);"></div>')
                     
                     # Compteur total
                     with ui.column().classes('items-center justify-center gap-2 flex-1'):
@@ -71,14 +71,14 @@ def build_telemetry_panel():
                     <div class="hud-corner hud-bl"></div>
                     <div class="hud-corner hud-br"></div>
                 </div>
-            ''', sanitize=False)
+            ''')
             
             with ui.column().classes('w-full h-full z-10 relative'):
                 with ui.row().classes('w-full items-center justify-between mb-3'):
                     ui.label('SYSTEM LOAD HISTORY').classes('text-cyan-400 font-bold tracking-[0.2em] text-sm')
                     with ui.row().classes('gap-4 text-[10px]'):
-                        ui.html('<div class="flex items-center gap-2"><div class="w-3 h-[2px] bg-cyan-400" style="box-shadow: 0 0 4px #00f3ff;"></div><span class="text-gray-400">CPU</span></div>', sanitize=False)
-                        ui.html('<div class="flex items-center gap-2"><div class="w-3 h-[2px] bg-blue-400" style="box-shadow: 0 0 4px #60a5fa;"></div><span class="text-gray-400">RAM</span></div>', sanitize=False)
+                        ui.html('<div class="flex items-center gap-2"><div class="w-3 h-[2px] bg-cyan-400" style="box-shadow: 0 0 4px #00f3ff;"></div><span class="text-gray-400">CPU</span></div>')
+                        ui.html('<div class="flex items-center gap-2"><div class="w-3 h-[2px] bg-blue-400" style="box-shadow: 0 0 4px #60a5fa;"></div><span class="text-gray-400">RAM</span></div>')
                 
                 chart = ui.echart({
                     'backgroundColor': 'transparent',

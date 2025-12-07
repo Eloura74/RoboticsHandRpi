@@ -14,6 +14,13 @@ MJPEG_PORT = 8090
 MJPEG_URL = f'http://{PC_IP}:{MJPEG_PORT}/cam.mjpg'
 
 # --------------------------------------------------------------------
+# RÉSEAU - RPi (Webcam locale)
+# --------------------------------------------------------------------
+RPI_CAMERA_PORT = 8091
+RPI_CAMERA_URL = f'http://127.0.0.1:{RPI_CAMERA_PORT}/stream.mjpg'
+RPI_CAMERA_ENABLED = True  # Activer/désactiver le panneau webcam RPi
+
+# --------------------------------------------------------------------
 # RÉSEAU - UDP (Réception tracking main)
 # --------------------------------------------------------------------
 UDP_IP = '0.0.0.0'  # Écoute sur toutes les interfaces

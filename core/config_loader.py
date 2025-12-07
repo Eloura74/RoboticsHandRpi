@@ -32,19 +32,32 @@ import sys
 # --------------------------------------------------------------------
 
 class NetworkConfig:
-    """Configuration réseau (PC, UDP, timeouts)."""
+    """Configuration réseau (PC, RPi, UDP, timeouts)."""
     
     def __init__(self, data: dict):
+        # Configuration PC (hand tracker)
         self.pc_ip = data.get('pc_ip', '192.168.1.10')
         self.mjpeg_port = data.get('mjpeg_port', 8090)
+        
+        # Configuration RPi (webcam locale)
+        self.rpi_ip = data.get('rpi_ip', '192.168.1.60')
+        self.rpi_camera_port = data.get('rpi_camera_port', 8091)
+        self.rpi_camera_enabled = data.get('rpi_camera_enabled', True)
+        
+        # Configuration UDP
         self.udp_ip = data.get('udp_ip', '0.0.0.0')
         self.udp_port = data.get('udp_port', 5005)
         self.lost_timeout = data.get('lost_timeout', 2.0)
     
     @property
     def mjpeg_url(self) -> str:
-        """Retourne l'URL complète du flux MJPEG."""
+        """Retourne l'URL complète du flux MJPEG du PC."""
         return f'http://{self.pc_ip}:{self.mjpeg_port}/cam.mjpg'
+    
+    @property
+    def rpi_camera_url(self) -> str:
+        """Retourne l'URL complète du flux webcam RPi."""
+        return f'http://{self.rpi_ip}:{self.rpi_camera_port}/stream.mjpg'
 
 
 class ServosConfig:
@@ -188,6 +201,12 @@ config = load_config()
 PC_IP = config.network.pc_ip
 MJPEG_PORT = config.network.mjpeg_port
 MJPEG_URL = config.network.mjpeg_url
+
+# Configuration RPi webcam
+RPI_CAMERA_PORT = config.network.rpi_camera_port
+RPI_CAMERA_URL = config.network.rpi_camera_url
+RPI_CAMERA_ENABLED = config.network.rpi_camera_enabled
+
 UDP_IP = config.network.udp_ip
 UDP_PORT = config.network.udp_port
 LOST_TIMEOUT = config.network.lost_timeout
@@ -211,6 +230,7 @@ __all__ = [
     'load_config',
     # Exports de compatibilité
     'PC_IP', 'MJPEG_PORT', 'MJPEG_URL',
+    'RPI_CAMERA_PORT', 'RPI_CAMERA_URL', 'RPI_CAMERA_ENABLED',
     'UDP_IP', 'UDP_PORT', 'LOST_TIMEOUT',
     'OPEN_THRESHOLD', 'CLOSE_THRESHOLD', 'THUMB_ANTI_FLUTTER',
     'FINGERS', 'WEB_PORT', 'UI_UPDATE_INTERVAL'

@@ -70,7 +70,7 @@ def _build_ecg_background():
                 " />
             </svg>
         </div>
-    ''', sanitize=False)
+    ''')
 
 
 def _build_logo_title():
@@ -82,7 +82,7 @@ def _build_logo_title():
                 <circle cx="50" cy="50" r="12" fill="#00f3ff" fill-opacity="0.3" />
                 <path d="M50 50 L50 20 M50 50 L80 65 M50 50 L20 65" stroke-width="4" opacity="0.8" />
             </svg>
-        ''', sanitize=False)
+        ''')
         
         with ui.column().classes('gap-0'):
             ui.label('NEURO-HAND V2.0').classes('text-lg sm:text-xl text-cyan-400 font-black tracking-widest title-glow uppercase')

@@ -47,6 +47,6 @@ def build_camera_panel():
                 <div class="video-hud-corner vh-br"></div>
                 <div class="scan-line"></div>
             </div>
-        ''', sanitize=False)
+        ''')
     
     return panel

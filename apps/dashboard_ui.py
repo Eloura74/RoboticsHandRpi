@@ -20,7 +20,8 @@ from apps.dashboard_config import MJPEG_URL, FINGERS, UI_UPDATE_INTERVAL
 from apps.dashboard_network import state, state_lock
 
 # Import des modules UI refactorisés
-from apps.ui import build_header, build_telemetry_panel, build_camera_panel, HUDCard
+from apps.ui import build_header, build_telemetry_panel, build_camera_panel, build_rpi_camera_overlay, HUDCard
+from apps.dashboard_config import RPI_CAMERA_ENABLED
 
 # Chemin vers le fichier de config servos
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config', 'servos_v2.json')
@@ -52,7 +53,7 @@ def build_control_panel(controller, local_ip: str, udp_port: int):
                 <div class="hud-corner hud-bl"></div>
                 <div class="hud-corner hud-br"></div>
             </div>
-        ''', sanitize=False)
+        ''')
 
         # En-tête : titre + badge LIVE LINK
         with ui.column().classes('items-center gap-1 w-full z-20'):
@@ -63,7 +64,7 @@ def build_control_panel(controller, local_ip: str, udp_port: int):
             ui.label('LIVE LINK') \
                 .classes('hud-chip mt-1')
         
-        ui.html('<div class="w-full h-[1px] bg-cyan-900/50"></div>', sanitize=False)
+        ui.html('<div class="w-full h-[1px] bg-cyan-900/50"></div>')
 
         # Infos de connexion UDP (Centré)
         with ui.column().classes('items-center gap-2 w-full z-20'):
@@ -105,7 +106,7 @@ def build_control_panel(controller, local_ip: str, udp_port: int):
                 on_click=toggle_sim
             ).props('flat').classes('w-full h-12 cyber-btn-glitch cyber-btn-sim text-xs border-2 border-purple-500')
 
-        ui.html('<div class="w-full h-[1px] bg-cyan-900/50"></div>', sanitize=False)
+        ui.html('<div class="w-full h-[1px] bg-cyan-900/50"></div>')
 
         # Section rotation pouce (servo MG90S)
         with ui.column().classes('items-center gap-1 w-full z-20'):
@@ -141,19 +142,23 @@ def build_3d_panel(hand_3d_structure: str, hand_3d_js: str):
     """
     Construit le panneau central contenant la visualisation 3D de la main.
     Injecte le HTML de la structure 3D et le JavaScript associé.
+    Intègre également le panneau webcam RPi toggle-able en overlay.
     
     Args:
         hand_3d_structure: HTML de la structure 3D.
         hand_3d_js: Code JavaScript pour l'animation 3D.
     """
+    # State réactif pour l'affichage du panneau webcam RPi
+    rpi_cam_visible = {'show': False}
+    
     with ui.card().classes(
         'flex-1 h-full hud-panel p-0 overflow-hidden relative panel-3d-bg'
-    ):
+    ) as panel:
         # Structure 3D (Canvas)
-        ui.html(hand_3d_structure, sanitize=False).classes('w-full h-full relative z-0')
+        ui.html(hand_3d_structure).classes('w-full h-full relative z-0')
         
-        # Overlay HUD Futuriste
-        ui.html('''
+        # Overlay HUD Futuriste avec bouton toggle webcam
+        ui.html(f'''
             <div class="hud-overlay">
                 <div class="hud-corner hud-tl"></div>
                 <div class="hud-corner hud-tr"></div>
@@ -168,7 +173,25 @@ def build_3d_panel(hand_3d_structure: str, hand_3d_js: str):
                     SCANNING 3D OBJECT // LIVE FEED
                 </div>
             </div>
-        ''', sanitize=False)
+        ''')
+        
+        # Bouton toggle pour la webcam RPi (coin haut droit)
+        if RPI_CAMERA_ENABLED:
+            with ui.element('div').classes(
+                'absolute top-4 right-4 z-40'
+            ):
+                ui.button(
+                    icon='videocam',
+                    on_click=lambda: rpi_cam_visible.update({'show': not rpi_cam_visible['show']})
+                ).props('flat round').classes(
+                    'text-cyan-400 bg-black/40 hover:bg-cyan-900/30 '
+                    'border border-cyan-500/40 hover:border-cyan-400 '
+                    'transition-all duration-200 shadow-lg shadow-cyan-500/20'
+                ).tooltip('Toggle RPi Webcam')
+        
+        # Panneau webcam RPi (overlay en haut gauche, affichable/masquable)
+        if RPI_CAMERA_ENABLED:
+            build_rpi_camera_overlay(rpi_cam_visible)
 
         ui.add_body_html(hand_3d_js)
 

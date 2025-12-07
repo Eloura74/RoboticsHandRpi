@@ -8,9 +8,14 @@
 # RÉSEAU
 # --------------------------------------------------------------------
 network:
-  # IP du PC qui diffuse le flux MJPEG (caméra)
+  # IP du PC qui diffuse le flux MJPEG (caméra hand tracker)
   pc_ip: "192.168.1.10"
   mjpeg_port: 8090
+  
+  # Webcam locale du Raspberry Pi (vue de la main robotique)
+  rpi_ip: "192.168.1.60"  # IP du Raspberry Pi
+  rpi_camera_port: 8091
+  rpi_camera_enabled: true  # Activer/désactiver le flux webcam RPi
   
   # Configuration UDP pour réception des données de tracking
   udp_ip: "0.0.0.0"  # Écoute sur toutes les interfaces

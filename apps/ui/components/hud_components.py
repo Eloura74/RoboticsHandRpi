@@ -37,7 +37,7 @@ class HUDCard:
                     <div class="hud-corner hud-bl"></div>
                     <div class="hud-corner hud-br"></div>
                 </div>
-            ''', sanitize=False)
+            ''')
         
         return self.container
     
@@ -119,7 +119,7 @@ class ProgressBar:
                      class="h-full bg-gradient-to-r from-{color}-600 to-{color}-400" 
                      style="width: 0%; transition: width 0.5s; box-shadow: 0 0 10px {glow};"></div>
             </div>
-        ''', sanitize=False)
+        ''')
     
     def update(self, percent: float):
         """
