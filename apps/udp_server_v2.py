@@ -11,7 +11,11 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+from core.logger import get_logger
 from core.hand_controller import HandController
+
+# Logger pour ce module
+logger = get_logger(__name__)
 
 
 UDP_IP = "0.0.0.0"
@@ -33,25 +37,25 @@ FINGERS = [
 
 
 def main():
-    print("===== SERVEUR UDP MAIN ROBOTIQUE V2.0 =====")
-    print(f"Écoute sur {UDP_IP}:{UDP_PORT}")
-    print("")
-    print("IMPORTANT :")
-    print("  1) ALIM 5V DES SERVOS COUPÉE avant de lancer ce script.")
-    print("  2) Main en position OUVERTE manuellement (doigts tendus).")
-    print("  3) Puis lancer ce script sur le Raspberry Pi.")
-    print("===================================================")
+    logger.info("===== SERVEUR UDP MAIN ROBOTIQUE V2.0 =====")
+    logger.info(f"Écoute sur {UDP_IP}:{UDP_PORT}")
+    logger.info("")
+    logger.info("IMPORTANT :")
+    logger.info("  1) ALIM 5V DES SERVOS COUPÉE avant de lancer ce script.")
+    logger.info("  2) Main en position OUVERTE manuellement (doigts tendus).")
+    logger.info("  3) Puis lancer ce script sur le Raspberry Pi.")
+    logger.info("===================================================")
 
     controller = HandController()  # met les PWM au neutre uniquement
 
-    print("\n[INFO] Les servos sont au NEUTRE côté PCA9685.")
+    logger.info("\nServos au NEUTRE côté PCA9685.")
     input("[ENTRÉE] quand tu es prêt à ALLUMER l'alim 5V servos... ")
 
     # Si tu rajoutes plus tard un MOSFET/relais sur GPIO pour le 5 V,
     # tu pourras activer ici :
     # controller.enable_power()
 
-    print("\n[INFO] Tu peux maintenant allumer l'alimentation 5V des servos.")
+    logger.info("\nTu peux maintenant allumer l'alimentation 5V des servos.")
     input("[ENTRÉE] après avoir allumé l'alim et vérifié que rien ne bouge... ")
 
     # Initialisation UDP
@@ -59,8 +63,8 @@ def main():
     sock.bind((UDP_IP, UDP_PORT))
     sock.settimeout(0.2)  # on ne bloque jamais trop longtemps
 
-    print("\n[READY] Serveur UDP prêt. Envoie des paquets depuis hand_tracker.py")
-    print("       Ctrl+C pour arrêter proprement.\n")
+    logger.info("\nServeur UDP prêt. Envoie des paquets depuis hand_tracker.py")
+    logger.info("Ctrl+C pour arrêter proprement.\n")
 
     # État logique local des doigts
     logical_state = {name: "open" for name in FINGERS}
@@ -76,15 +80,15 @@ def main():
 
             # --------- Watchdog "perte de main / perte de tracking" ---------
             if hand_visible and (now - last_packet_time > LOST_TIMEOUT):
-                print(
-                    f"[WATCHDOG] Plus de paquets depuis {now - last_packet_time:.2f}s -> "
+                logger.warning(
+                    f"WATCHDOG: Plus de paquets depuis {now - last_packet_time:.2f}s -> "
                     "ouverture de sécurité + neutre."
                 )
                 try:
                     controller.open_hand()
                     controller.stop_all()
                 except Exception as e:
-                    print(f"[ERREUR] Pendant l'ouverture de sécurité : {e}")
+                    logger.error(f"Pendant l'ouverture de sécurité : {e}", exc_info=True)
                 # On considère la main comme "non visible"
                 hand_visible = False
                 safe_open_done = True
@@ -100,7 +104,7 @@ def main():
                 time.sleep(0.01)
                 continue
             except Exception as e:
-                print(f"[ERREUR] recvfrom : {e}")
+                logger.error(f"Erreur recvfrom : {e}")
                 time.sleep(0.05)
                 continue
 
@@ -111,7 +115,7 @@ def main():
             try:
                 msg = json.loads(raw)
             except json.JSONDecodeError:
-                print(f"[WARN] Paquet non JSON : {raw!r}")
+                logger.warning(f"Paquet non JSON : {raw!r}")
                 continue
 
             now = time.time()
@@ -129,12 +133,12 @@ def main():
             if explicit_not_visible:
                 # Main explicitement perdue -> même logique que watchdog
                 if hand_visible:
-                    print("[UDP] Flag 'visible=false' ou 'tracking=false' -> ouverture sécurité")
+                    logger.info("Flag 'visible=false' ou 'tracking=false' -> ouverture sécurité")
                     try:
                         controller.open_hand()
                         controller.stop_all()
                     except Exception as e:
-                        print(f"[ERREUR] Pendant l'ouverture de sécurité (flag) : {e}")
+                        logger.error(f"Pendant l'ouverture de sécurité (flag) : {e}", exc_info=True)
                     hand_visible = False
                     safe_open_done = True
                     for name in logical_state:
@@ -167,19 +171,19 @@ def main():
                 # Hystérésis : on ne change d'état que si on dépasse un seuil
                 # Utilisation de parallel=True pour des mouvements fluides et simultanés
                 if v > CLOSE_THRESHOLD and current_state != "close":
-                    print(f"[UDP] {finger}: v={v:.2f} -> CLOSE")
+                    logger.debug(f"{finger}: v={v:.2f} -> CLOSE")
                     controller.close_finger(finger, parallel=True)
                     logical_state[finger] = "close"
 
                 elif v < OPEN_THRESHOLD and current_state != "open":
-                    print(f"[UDP] {finger}: v={v:.2f} -> OPEN")
+                    logger.debug(f"{finger}: v={v:.2f} -> OPEN")
                     controller.open_finger(finger, parallel=True)
                     logical_state[finger] = "open"
 
             time.sleep(0.01)
 
     except KeyboardInterrupt:
-        print("\n[CTRL+C] Arrêt demandé par l'utilisateur.")
+        logger.info("\nArrêt demandé par l'utilisateur.")
     finally:
         # Séquence d'arrêt : main ouverte + neutre + coupure alim dans shutdown()
         try:
@@ -188,11 +192,11 @@ def main():
                 controller.open_hand()
                 controller.stop_all()
         except Exception as e:
-            print(f"[AVERTISSEMENT] Erreur pendant l'ouverture finale : {e}")
+            logger.warning(f"Erreur pendant l'ouverture finale : {e}")
 
         controller.shutdown()
         sock.close()
-        print("[FIN] Serveur UDP V2.0 arrêté proprement.")
+        logger.info("Serveur UDP V2.0 arrêté proprement.")
         
 
 if __name__ == "__main__":

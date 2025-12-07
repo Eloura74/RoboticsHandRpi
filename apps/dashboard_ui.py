@@ -20,7 +20,7 @@ from apps.dashboard_config import MJPEG_URL, FINGERS, UI_UPDATE_INTERVAL
 from apps.dashboard_network import state, state_lock
 
 # Import des modules UI refactorisés
-from apps.ui import build_header, build_telemetry_panel, HUDCard
+from apps.ui import build_header, build_telemetry_panel, build_camera_panel, HUDCard
 
 # Chemin vers le fichier de config servos
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config', 'servos_v2.json')
@@ -29,40 +29,6 @@ CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config', 'servos_v2
 # --------------------------------------------------------------------
 # COMPOSANTS UI (à refactoriser progressivement)
 # --------------------------------------------------------------------
-
-
-def build_camera_panel():
-    """
-    Construit le panneau vidéo avec flux MJPEG et overlay HUD.
-    """
-    with ui.card().classes(
-        'w-full h-[32vh] min-h-[220px] hud-panel p-0 overflow-hidden '
-        'relative video-panel'
-    ):
-        # Bandeau titre avec indicateur CAM-01
-        with ui.row().classes(
-            'absolute top-0 left-0 right-0 z-20 px-3 py-1 '
-            'items-center justify-between bg-black/40'
-        ):
-            ui.label('OPTICAL FEED') \
-                .classes('text-[10px] text-cyan-400 font-orbitron tracking-[0.2em]')
-            ui.label('CAM-01') \
-                .classes('text-[10px] px-2 py-[1px] rounded-full '
-                         'border border-cyan-500/60 text-cyan-300 font-orbitron')
-
-        # Flux MJPEG depuis le PC
-        ui.image(MJPEG_URL).classes('w-full h-full object-cover')
-
-        # Overlay HUD : cadre + coins + ligne de scan animée
-        ui.html('''
-            <div class="video-hud-frame">
-                <div class="video-hud-corner vh-tl"></div>
-                <div class="video-hud-corner vh-tr"></div>
-                <div class="video-hud-corner vh-bl"></div>
-                <div class="video-hud-corner vh-br"></div>
-                <div class="scan-line"></div>
-            </div>
-        ''', sanitize=False)
 
 
 def build_control_panel(controller, local_ip: str, udp_port: int):

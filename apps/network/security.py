@@ -113,14 +113,21 @@ def validate_finger_values(data: dict) -> Dict[str, float]:
     Raises:
         ValueError: Si le format est invalide (nom de doigt, type, ou plage)
     """
-    # Doigts valides pour NEURO-HAND
-    VALID_FINGERS = {'pouce', 'index', 'majeur', 'annulaire_auriculaire'}
+    # Doigts valides pour NEURO-HAND (depuis config)
+    try:
+        from core.config_loader import config
+        VALID_FINGERS = set(config.fingers)
+    except Exception:
+        # Fallback si config non disponible
+        VALID_FINGERS = {'pouce_articulation', 'index', 'majeur', 'annulaire_auriculaire'}
+    
     validated = {}
     
     for finger, value in data.items():
-        # Vérifier le nom du doigt
+        # Ignorer les champs metadata (visible, tracking, etc.)
+        # qui ne sont pas des doigts
         if finger not in VALID_FINGERS:
-            raise ValueError(f"Invalid finger name: {finger}")
+            continue  # Passer au champ suivant sans erreur
         
         # Vérifier le type
         if not isinstance(value, (int, float)):

@@ -1,0 +1,76 @@
+# ====================================================================
+# CONFIGURATION NEURO-HAND V2.0
+# ====================================================================
+# Fichier de configuration principal au format YAML.
+# Modifiable à chaud sans redémarrer le système (selon implémentation).
+
+# --------------------------------------------------------------------
+# RÉSEAU
+# --------------------------------------------------------------------
+network:
+  # IP du PC qui diffuse le flux MJPEG (caméra)
+  pc_ip: "192.168.1.10"
+  mjpeg_port: 8090
+  
+  # Configuration UDP pour réception des données de tracking
+  udp_ip: "0.0.0.0"  # Écoute sur toutes les interfaces
+  udp_port: 5005
+  
+  # Timeout de déconnexion (secondes)
+  lost_timeout: 2.0
+
+# --------------------------------------------------------------------
+# CONFIGURATION SERVOS
+# --------------------------------------------------------------------
+servos:
+  # Seuils d'hystérésis pour servos continus (0.0 = ouvert, 1.0 = fermé)
+  open_threshold: 0.3   # En dessous -> ouvrir
+  close_threshold: 0.7  # Au dessus -> fermer
+  
+  # Seuil anti-flutter pour rotation du pouce (servo MG90S)
+  thumb_anti_flutter: 0.02
+
+# --------------------------------------------------------------------
+# DOIGTS PILOTÉS
+# --------------------------------------------------------------------
+fingers:
+  - pouce_articulation
+  - index
+  - majeur
+  - annulaire_auriculaire
+
+# --------------------------------------------------------------------
+# INTERFACE UTILISATEUR
+# --------------------------------------------------------------------
+ui:
+  # Port du serveur web NiceGUI
+  web_port: 8080
+  
+  # Intervalle de mise à jour de l'interface (secondes)
+  # 0.05 = 50ms = 20 FPS
+  update_interval: 0.05
+
+# --------------------------------------------------------------------
+# SÉCURITÉ RÉSEAU
+# --------------------------------------------------------------------
+security:
+  # Activer l'authentification HMAC-SHA256 pour les paquets UDP
+  enable_hmac: false  # Désactivé par défaut (à activer en production)
+  
+  # Rate limiting pour prévenir les attaques DoS
+  rate_limit_requests: 100  # Nombre max de requêtes
+  rate_limit_window: 1.0    # Fenêtre temporelle (secondes)
+
+# --------------------------------------------------------------------
+# LOGGING
+# --------------------------------------------------------------------
+logging:
+  # Niveau de log : DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  
+  # Fichier de sortie des logs
+  file: "logs/neurohand.log"
+  
+  # Rotation automatique des fichiers
+  max_bytes: 10485760  # 10 MB
+  backup_count: 5      # Nombre de fichiers de backup

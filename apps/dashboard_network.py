@@ -14,10 +14,21 @@ import time
 import threading
 from typing import Optional
 
-from apps.dashboard_config import (
-    UDP_IP, UDP_PORT, LOST_TIMEOUT, FINGERS,
-    OPEN_THRESHOLD, CLOSE_THRESHOLD, THUMB_ANTI_FLUTTER
-)
+from core.logger import get_logger
+from core.config_loader import config
+from apps.network import UDPAuthenticator, RateLimiter, validate_finger_values
+
+# Logger pour ce module
+logger = get_logger(__name__)
+
+# Constantes de configuration (avec fallback sur anciennes valeurs)
+UDP_IP = config.network.udp_ip
+UDP_PORT = config.network.udp_port
+LOST_TIMEOUT = config.network.lost_timeout
+FINGERS = config.fingers
+OPEN_THRESHOLD = config.servos.open_threshold
+CLOSE_THRESHOLD = config.servos.close_threshold
+THUMB_ANTI_FLUTTER = config.servos.thumb_anti_flutter
 
 
 # --------------------------------------------------------------------
@@ -75,13 +86,13 @@ def _setup_udp_socket() -> Optional[socket.socket]:
         sock.setblocking(False)
         
         local_ip = get_local_ip()
-        print(f"[UDP] Thread UDP démarré - écoute sur {UDP_IP}:{UDP_PORT}")
-        print(f"[UDP] IP locale du Raspberry Pi: {local_ip}")
-        print(f"[UDP] Le PC doit envoyer les données UDP à: {local_ip}:{UDP_PORT}")
+        logger.info(f"Thread UDP démarré - écoute sur {UDP_IP}:{UDP_PORT}")
+        logger.info(f"IP locale du Raspberry Pi: {local_ip}")
+        logger.info(f"Le PC doit envoyer les données UDP à: {local_ip}:{UDP_PORT}")
         
         return sock
     except Exception as e:
-        print(f"[ERROR] Impossible de démarrer le thread UDP: {e}")
+        logger.error(f"Impossible de démarrer le thread UDP: {e}", exc_info=True)
         return None
 
 
@@ -98,7 +109,7 @@ def _parse_udp_data(data: bytes):
             # Ne traiter que si pas en mode simulation
             if not state['simu_mode']:
                 if not state['udp_connected']:
-                    print("[UDP] CONNEXION ÉTABLIE - Réception de données depuis le PC")
+                    logger.info("CONNEXION ÉTABLIE - Réception de données depuis le PC")
                 
                 state['udp_connected'] = True
                 state['packet_count'] += 1
@@ -112,7 +123,7 @@ def _parse_udp_data(data: bytes):
                         except Exception:
                             pass
     except Exception as e:
-        print(f"[UDP] Erreur de parsing: {e}")
+        logger.warning(f"Erreur de parsing UDP: {e}")
 
 
 # --------------------------------------------------------------------
@@ -124,11 +135,22 @@ def receiver_thread():
     Thread de réception UDP :
     - Écoute les paquets UDP contenant les valeurs des doigts (0..1),
     - Détecte les timeouts (perte de connexion),
-    - Calcule le FPS de réception.
+    - Calcule le FPS de réception,
+    - Applique rate limiting et validation de sécurité.
     """
     sock = _setup_udp_socket()
     if not sock:
         return
+
+    # Initialisation de la sécurité réseau
+    limiter = RateLimiter(
+        max_requests=config.security.rate_limit_requests,
+        window=config.security.rate_limit_window
+    )
+    authenticator = UDPAuthenticator() if config.security.enable_hmac else None
+    
+    logger.info(f"Sécurité UDP : HMAC={'activé' if config.security.enable_hmac else 'désactivé'}, "
+                f"Rate limit={config.security.rate_limit_requests} req/{config.security.rate_limit_window}s")
 
     # Variables de suivi de la réception
     packet_cnt = 0
@@ -141,7 +163,7 @@ def receiver_thread():
 
         # Détection de perte de signal (timeout)
         if state['udp_connected'] and (now - last_rx > LOST_TIMEOUT):
-            print(f"[UDP] TIMEOUT - Pas de données depuis {LOST_TIMEOUT}s. Déconnexion.")
+            logger.warning(f"TIMEOUT - Pas de données depuis {LOST_TIMEOUT}s. Déconnexion.")
             with state_lock:
                 state['udp_connected'] = False
 
@@ -156,20 +178,71 @@ def receiver_thread():
 
         # Traitement du paquet reçu
         if data:
+            # Rate limiting (protection DoS)
+            if not limiter.allow_request():
+                logger.warning("Rate limit dépassé, paquet ignoré")
+                time.sleep(0.001)
+                continue
+            
             last_rx = now
             packet_cnt += 1
             rx_count += 1
+
+            # Vérification H MAC (si activée)
+            payload = data
+            if authenticator:
+                # Format attendu : [signature 64 bytes][payload]
+                if len(data) < 64:
+                    logger.warning(f"Paquet trop court ({len(data)} bytes), signature HMAC manquante")
+                    continue
+                
+                try:
+                    signature = data[:64].decode('utf-8', errors='ignore')
+                    payload = data[64:]
+                    
+                    if not authenticator.verify_packet(payload, signature):
+                        logger.warning("Signature HMAC invalide, paquet rejeté")
+                        continue
+                except Exception as e:
+                    logger.warning(f"Erreur vérification HMAC : {e}")
+                    continue
 
             # Calcul du "FPS" UDP (paquets/sec)
             if now - t0 > 1.0:
                 with state_lock:
                     state['fps'] = packet_cnt
-                print(f"[UDP] {packet_cnt} paquets/sec reçus (total: {rx_count})")
+                logger.debug(f"{packet_cnt} paquets/sec reçus (total: {rx_count})")
                 packet_cnt = 0
                 t0 = now
 
-            # Parsing et mise à jour de l'état
-            _parse_udp_data(data)
+            # Parsing JSON
+            try:
+                msg = json.loads(payload.decode('utf-8'))
+            except Exception as e:
+                logger.warning(f"Erreur décodage JSON : {e}")
+                continue
+            
+            # Validation des données (sécurité)
+            try:
+                validated = validate_finger_values(msg)
+            except ValueError as e:
+                logger.warning(f"Données invalides : {e}")
+                continue
+            
+            # Mise à jour de l'état global (thread-safe)
+            # Ne traiter que si pas en mode simulation
+            with state_lock:
+                if not state['simu_mode']:
+                    if not state['udp_connected']:
+                        logger.info("CONNEXION ÉTABLIE - Réception de données depuis le PC")
+                    
+                    state['udp_connected'] = True
+                    state['packet_count'] += 1
+                    
+                    # Mise à jour avec les données validées
+                    for f, v in validated.items():
+                        if f in state['values']:
+                            state['values'][f] = v
 
         time.sleep(0.001)
 
@@ -255,8 +328,6 @@ def hardware_thread(ctrl):
                 _control_continuous_fingers(ctrl, targets, logical)
 
             except Exception as e:
-                print(f"[HARDWARE] Erreur dans hardware_thread: {e}")
-                import traceback
-                traceback.print_exc()
+                logger.error(f"Erreur dans hardware_thread: {e}", exc_info=True)
 
         time.sleep(0.05)
