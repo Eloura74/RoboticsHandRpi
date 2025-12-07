@@ -60,6 +60,8 @@ from apps.dashboard_ui import (
     build_camera_panel,
     build_control_panel,
     build_3d_panel,
+    build_servo_config_panel,
+    build_telemetry_panel,
     create_update_loop
 )
 
@@ -90,23 +92,48 @@ def signal_handler(signum, frame):
 def build_ui():
     """
     Construit l'interface complète du dashboard NEURO-HAND.
-    Structure : header + (colonne gauche : caméra + contrôles) + (zone centrale : main 3D).
+    Structure : header + drawer (nav) + (colonne gauche : caméra + contrôles) + (zone centrale : main 3D).
     """
     # Injection du CSS global
     ui.add_head_html(CSS_STYLE)
 
-    # Construction du header avec badge de statut
-    status_label = build_header()
+    # Construction du header avec badge de statut et bouton menu
+    status_label, menu_button = build_header()
 
-    # Body principal : colonne gauche + zone centrale
-    with ui.row().classes('w-full h-[92vh] p-4 gap-4 bg-transparent'):
-        # Colonne gauche : caméra + panneau de contrôle
-        with ui.column().classes('w-[26%] min-w-[300px] h-full gap-4'):
-            build_camera_panel()
-            build_control_panel(controller, get_local_ip(), UDP_PORT)
+    # Drawer de navigation (latéral gauche)
+    with ui.left_drawer(value=False).classes('bg-gray-900/90 border-r border-cyan-900/50') as drawer:
+        ui.label('NAVIGATION').classes('text-cyan-400 font-bold tracking-widest mb-4')
+        
+        # Onglets verticaux dans le drawer
+        with ui.tabs().classes('w-full text-cyan-400') as tabs:
+            ui.tab('DASHBOARD', icon='dashboard').classes('w-full justify-start px-4')
+            ui.tab('CONFIG', icon='settings').classes('w-full justify-start px-4')
+            ui.tab('TELEMETRY', icon='analytics').classes('w-full justify-start px-4')
 
-        # Zone centrale : visualisation 3D de la main
-        build_3d_panel(HAND_3D_STRUCTURE, HAND_3D_JS)
+    # Liaison du bouton menu pour ouvrir/fermer le drawer
+    menu_button.on_click(lambda: drawer.toggle())
+
+    # Body principal avec gestion des onglets
+    with ui.tab_panels(tabs, value='DASHBOARD').classes('w-full h-[92vh] bg-transparent'):
+        
+        # --- ONGLET DASHBOARD (VUE PRINCIPALE) ---
+        with ui.tab_panel('DASHBOARD').classes('w-full h-full p-4 gap-4'):
+            with ui.row().classes('w-full h-full gap-4'):
+                # Colonne gauche : caméra + panneau de contrôle
+                with ui.column().classes('w-[26%] min-w-[300px] h-full gap-4'):
+                    build_camera_panel()
+                    build_control_panel(controller, get_local_ip(), UDP_PORT)
+
+                # Zone centrale : visualisation 3D de la main
+                build_3d_panel(HAND_3D_STRUCTURE, HAND_3D_JS)
+
+        # --- ONGLET CONFIGURATION (SERVOS) ---
+        with ui.tab_panel('CONFIG').classes('w-full h-full p-4'):
+            build_servo_config_panel()
+
+        # --- ONGLET TÉLÉMÉTRIE ---
+        with ui.tab_panel('TELEMETRY').classes('w-full h-full p-4'):
+            build_telemetry_panel()
 
     # Initialisation de la boucle de mise à jour UI
     create_update_loop(status_label)

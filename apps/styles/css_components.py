@@ -519,34 +519,34 @@ CSS_COMPONENTS = '''
     }
 
     .cyber-btn-open {
-        background: rgba(0, 243, 255, 0.1);
-        border: 1px solid rgba(0, 243, 255, 0.5);
-        color: var(--neon-cyan);
+        background: rgba(0, 243, 255, 0.1) !important;
+        border: 1px solid rgba(0, 243, 255, 0.5) !important;
+        color: var(--neon-cyan) !important;
     }
     .cyber-btn-open:hover {
-        background: rgba(0, 243, 255, 0.2);
+        background: rgba(0, 243, 255, 0.2) !important;
         box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
         text-shadow: 0 0 8px var(--neon-cyan);
     }
 
     .cyber-btn-close {
-        background: rgba(255, 0, 60, 0.1);
-        border: 1px solid rgba(255, 0, 60, 0.5);
-        color: #ff003c;
+        background: rgba(255, 0, 60, 0.1) !important;
+        border: 1px solid rgba(255, 0, 60, 0.5) !important;
+        color: #ff003c !important;
     }
     .cyber-btn-close:hover {
-        background: rgba(255, 0, 60, 0.2);
+        background: rgba(255, 0, 60, 0.2) !important;
         box-shadow: 0 0 15px rgba(255, 0, 60, 0.4);
         text-shadow: 0 0 8px #ff003c;
     }
 
     .cyber-btn-sim {
-        background: rgba(138, 43, 226, 0.1);
-        border: 1px solid rgba(138, 43, 226, 0.5);
-        color: #8a2be2;
+        background: rgba(138, 43, 226, 0.1) !important;
+        border: 1px solid rgba(138, 43, 226, 0.5) !important;
+        color: #8a2be2 !important;
     }
     .cyber-btn-sim:hover {
-        background: rgba(138, 43, 226, 0.2);
+        background: rgba(138, 43, 226, 0.2) !important;
         box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
         text-shadow: 0 0 8px #8a2be2;
     }
@@ -652,6 +652,62 @@ CSS_COMPONENTS = '''
         10% { opacity: 0.5; }
         90% { opacity: 0.5; }
         100% { top: 100%; opacity: 0; }
+    }
+    /* ================================================================
+       CONFIG PANEL STYLES
+       ================================================================ */
+    .config-card {
+        background: rgba(0, 10, 15, 0.85);
+        border: 1px solid rgba(0, 243, 255, 0.2);
+        box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .config-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 10px; height: 10px;
+        border-top: 2px solid var(--neon-cyan);
+        border-left: 2px solid var(--neon-cyan);
+    }
+
+    .config-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0; right: 0;
+        width: 10px; height: 10px;
+        border-bottom: 2px solid var(--neon-cyan);
+        border-right: 2px solid var(--neon-cyan);
+    }
+
+    .config-input .q-field__control {
+        background: rgba(0, 243, 255, 0.05) !important;
+        border-bottom: 1px solid rgba(0, 243, 255, 0.3) !important;
+        border-radius: 4px 4px 0 0 !important;
+    }
+
+    .config-input .q-field__control:before {
+        border-bottom: 1px solid rgba(0, 243, 255, 0.5) !important;
+    }
+
+    .config-input .q-field__control:after {
+        background: var(--neon-cyan) !important;
+        height: 1px !important;
+    }
+
+    .config-input .q-field__label {
+        color: rgba(0, 243, 255, 0.7) !important;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    .config-input .q-field__native {
+        color: var(--neon-cyan) !important;
+        font-family: 'Share Tech Mono', monospace;
+        font-weight: bold;
     }
 </style>
 '''
