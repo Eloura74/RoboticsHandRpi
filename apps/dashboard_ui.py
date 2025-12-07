@@ -2,14 +2,12 @@
 # COMPOSANTS D'INTERFACE UTILISATEUR (NICEGUI)
 # --------------------------------------------------------------------
 """
-Ce module contient tous les composants de l'interface NiceGUI :
-- Header avec badge de statut et navigation
-- Panneau vidéo (caméra MJPEG)
-- Panneau de contrôle (boutons, rotation pouce, urgence)
-- Panneau 3D de visualisation de la main
-- Panneau de configuration des servos
-- Panneau de télémétrie
-- Boucle de mise à jour de l'interface
+Ce module orchestre les composants de l'interface NiceGUI.
+Les fonctions principales sont maintenant dans des modules séparés :
+- apps.ui.header : Header avec badge de statut et navigation
+- apps.ui.panels : Panneaux (caméra, contrôle, 3D, config)
+- apps.ui.telemetry : Panneau de télémétrie
+- apps.ui.components : Composants HUD réutilisables
 """
 
 import json
@@ -21,82 +19,16 @@ from nicegui import ui
 from apps.dashboard_config import MJPEG_URL, FINGERS, UI_UPDATE_INTERVAL
 from apps.dashboard_network import state, state_lock
 
+# Import des modules UI refactorisés
+from apps.ui import build_header, build_telemetry_panel, HUDCard
+
 # Chemin vers le fichier de config servos
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config', 'servos_v2.json')
 
 
 # --------------------------------------------------------------------
-# COMPOSANTS UI
+# COMPOSANTS UI (à refactoriser progressivement)
 # --------------------------------------------------------------------
-
-def build_header():
-    """
-    Construit le header de l'interface (logo + titre + badge de statut + bouton menu).
-    
-    Returns:
-        tuple: (status_label, menu_button)
-            - status_label: Le label de statut pour mise à jour ultérieure.
-            - menu_button: Le bouton pour ouvrir le menu latéral.
-    """
-    with ui.header().classes('bg-transparent p-0 elevation-0'):
-        with ui.row().classes(
-            'hud-header w-full h-[6vh] min-h-[50px] '
-            'items-center justify-between px-6 sm:px-8'
-        ):
-            # Partie Gauche : Bouton Menu + Logo + Titre
-            with ui.row().classes('items-center gap-4'):
-                # Bouton Menu (Burger)
-                menu_button = ui.button(icon='menu').classes('text-cyan-400 bg-transparent')
-                
-                # Logo SVG personnalisé (Nœud Neuronal Hexagonal)
-                ui.html('''
-                    <svg class="logo-glow" width="32" height="32" viewBox="0 0 100 100" fill="none" stroke="#00f3ff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M50 20 L80 35 L80 65 L50 80 L20 65 L20 35 Z" />
-                        <circle cx="50" cy="50" r="12" fill="#00f3ff" fill-opacity="0.3" />
-                        <path d="M50 50 L50 20 M50 50 L80 65 M50 50 L20 65" stroke-width="4" opacity="0.8" />
-                    </svg>
-                ''', sanitize=False)
-                
-                with ui.column().classes('gap-0'):
-                    ui.label('NEURO-HAND V1.0') \
-                        .classes('text-lg sm:text-xl text-cyan-400 font-black tracking-widest title-glow uppercase')
-                    ui.label('NEURO-LINK // SYSTEM ONLINE') \
-                        .classes('text-[10px] text-gray-400 tracking-wider')
-
-            # Partie Centrale : Animation Ligne de Vie (ECG - SVG) - Version Large Restaurée
-            with ui.element('div').classes('lifeline-container'):
-                ui.html('''
-                    <svg class="ecg-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
-                        <path class="ecg-path" d="
-                            M0,50 L100,50 
-                            L110,50 L120,40 L130,60 L140,50 
-                            L150,50 L160,50 L165,40 L170,50 L180,50 L185,20 L190,80 L195,50 L205,50 
-                            L215,50 L220,40 L225,60 L235,50 
-                            L300,50
-                            L310,50 L320,40 L330,60 L340,50 
-                            L350,50 L360,50 L365,40 L370,50 L380,50 L385,20 L390,80 L395,50 L405,50 
-                            L415,50 L420,40 L425,60 L435,50 
-                            L500,50
-                            L510,50 L520,40 L530,60 L540,50 
-                            L550,50 L560,50 L565,40 L570,50 L580,50 L585,20 L590,80 L595,50 L605,50 
-                            L615,50 L620,40 L625,60 L635,50 
-                            L700,50
-                            L710,50 L720,40 L730,60 L740,50 
-                            L750,50 L760,50 L765,40 L770,50 L780,50 L785,20 L790,80 L795,50 L805,50 
-                            L815,50 L820,40 L825,60 L835,50 
-                            L1000,50
-                        " />
-                    </svg>
-                ''', sanitize=False).classes('w-full h-full')
-
-            # Partie Droite : Badge de statut (ONLINE/OFFLINE)
-            status_label = ui.label('INIT') \
-                .classes(
-                    'text-xs px-3 py-1 bg-red-900/40 text-red-400 '
-                    'border border-red-500 rounded font-bold'
-                )
-    
-    return status_label, menu_button
 
 
 def build_camera_panel():
@@ -343,56 +275,6 @@ def build_servo_config_panel():
             ui.button('SAVE CONFIGURATION', icon='save', on_click=save_config)\
                 .classes('cyber-btn-glitch bg-cyan-700 text-white')
 
-
-def build_telemetry_panel():
-    """
-    Construit le panneau de télémétrie système.
-    """
-    with ui.column().classes('w-full h-full p-6 gap-6'):
-        ui.label('SYSTEM TELEMETRY').classes('hud-section-title text-xl mb-4')
-
-        # Section Réseau
-        with ui.card().classes('hud-panel w-full p-4'):
-            ui.label('NETWORK STATUS').classes('text-cyan-400 font-bold mb-4')
-            
-            with ui.row().classes('w-full justify-around'):
-                # Jauge FPS
-                with ui.column().classes('items-center'):
-                    fps_label = ui.label('0').classes('text-4xl font-mono text-green-400')
-                    ui.label('UDP PACKETS/SEC').classes('text-xs text-gray-400')
-                
-                # Compteur total
-                with ui.column().classes('items-center'):
-                    count_label = ui.label('0').classes('text-4xl font-mono text-blue-400')
-                    ui.label('TOTAL PACKETS').classes('text-xs text-gray-400')
-
-        # Section Hardware (Placeholders)
-        with ui.grid(columns=3).classes('w-full gap-4'):
-            # Voltage
-            with ui.card().classes('hud-panel p-4 items-center'):
-                ui.icon('battery_charging_full', size='lg', color='yellow-400')
-                ui.label('VOLTAGE').classes('text-xs text-gray-400 mt-2')
-                ui.label('5.1 V').classes('text-2xl font-mono text-yellow-400') # Mock
-            
-            # Current
-            with ui.card().classes('hud-panel p-4 items-center'):
-                ui.icon('electric_bolt', size='lg', color='red-400')
-                ui.label('CURRENT').classes('text-xs text-gray-400 mt-2')
-                ui.label('1.2 A').classes('text-2xl font-mono text-red-400') # Mock
-
-            # CPU Temp (Rpi)
-            with ui.card().classes('hud-panel p-4 items-center'):
-                ui.icon('thermostat', size='lg', color='orange-400')
-                ui.label('CPU TEMP').classes('text-xs text-gray-400 mt-2')
-                ui.label('42°C').classes('text-2xl font-mono text-orange-400') # Mock
-
-        # Timer pour mettre à jour les stats réelles
-        def update_telemetry():
-            with state_lock:
-                fps_label.text = str(state['fps'])
-                count_label.text = str(state['packet_count'])
-
-        ui.timer(0.5, update_telemetry)
 
 
 def create_update_loop(status_label):

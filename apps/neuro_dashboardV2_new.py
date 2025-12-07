@@ -92,28 +92,15 @@ def signal_handler(signum, frame):
 def build_ui():
     """
     Construit l'interface complète du dashboard NEURO-HAND.
-    Structure : header + drawer (nav) + (colonne gauche : caméra + contrôles) + (zone centrale : main 3D).
+    Structure : header avec tabs intégrés + panneau principal avec tab_panels.
     """
     # Injection du CSS global
     ui.add_head_html(CSS_STYLE)
 
-    # Construction du header avec badge de statut et bouton menu
-    status_label, menu_button = build_header()
+    # Construction du header avec badge de statut et tabs de navigation
+    status_label, tabs = build_header()
 
-    # Drawer de navigation (latéral gauche)
-    with ui.left_drawer(value=False).classes('bg-gray-900/90 border-r border-cyan-900/50') as drawer:
-        ui.label('NAVIGATION').classes('text-cyan-400 font-bold tracking-widest mb-4')
-        
-        # Onglets verticaux dans le drawer
-        with ui.tabs().classes('w-full text-cyan-400') as tabs:
-            ui.tab('DASHBOARD', icon='dashboard').classes('w-full justify-start px-4')
-            ui.tab('CONFIG', icon='settings').classes('w-full justify-start px-4')
-            ui.tab('TELEMETRY', icon='analytics').classes('w-full justify-start px-4')
-
-    # Liaison du bouton menu pour ouvrir/fermer le drawer
-    menu_button.on_click(lambda: drawer.toggle())
-
-    # Body principal avec gestion des onglets
+    # Body principal avec gestion des onglets liés aux tabs du header
     with ui.tab_panels(tabs, value='DASHBOARD').classes('w-full h-[92vh] bg-transparent'):
         
         # --- ONGLET DASHBOARD (VUE PRINCIPALE) ---
