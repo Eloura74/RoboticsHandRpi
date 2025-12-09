@@ -133,8 +133,13 @@ class HandController:
         value = max(-1.0, min(1.0, value))
         try:
             self.kit.continuous_servo[channel].throttle = value
-        except Exception as e:
-            print(f"[ERREUR] throttle canal {channel} -> {value} : {e}")
+        except (OSError, IOError) as e:
+            # Erreur I2C temporaire (bus saturé, câble déconnecté)
+            print(f"[AVERTISSEMENT] Erreur I2C temporaire canal {channel}: {e}")
+        except (AttributeError, IndexError, KeyError) as e:
+            # Bug de programmation (canal invalide, servo non initialisé)
+            print(f"[ERREUR CRITIQUE] Bug canal {channel}: {e}")
+            raise
 
     def _set_angle(self, channel: int, angle: float) -> None:
         """
@@ -144,8 +149,13 @@ class HandController:
         angle = max(0.0, min(180.0, float(angle)))
         try:
             self.kit.servo[channel].angle = angle
-        except Exception as e:
-            print(f"[ERREUR] angle canal {channel} -> {angle}° : {e}")
+        except (OSError, IOError) as e:
+            # Erreur I2C temporaire
+            print(f"[AVERTISSEMENT] Erreur I2C temporaire canal {channel}: {e}")
+        except (AttributeError, IndexError, KeyError) as e:
+            # Bug de programmation
+            print(f"[ERREUR CRITIQUE] Bug canal {channel}: {e}")
+            raise
 
     # ==================================================================
     # Neutres (servos continus + servo de pouce)
@@ -252,8 +262,17 @@ class HandController:
         with self._finger_locks[name]:
             try:
                 self._move_finger_blocking(name, action, force=force)
+            except (OSError, IOError) as e:
+                # Erreur I2C → loguer mais ne pas crasher le thread
+                print(f"[AVERTISSEMENT] Erreur I2C thread '{name}': {e}")
+            except ValueError as e:
+                # Configuration invalide
+                print(f"[ERREUR] Configuration invalide pour '{name}': {e}")
             except Exception as e:
-                print(f"[ERREUR] Thread doigt '{name}': {e}")
+                # Erreur inattendue → loguer avec traceback complet
+                print(f"[ERREUR CRITIQUE] Thread '{name}' crashed: {e}")
+                import traceback
+                traceback.print_exc()
 
     # ==================================================================
     # API publique doigts (servos continus)

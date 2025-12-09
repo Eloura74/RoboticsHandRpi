@@ -49,12 +49,16 @@ except ImportError:
     sys.exit(1)
 
 # Import des modules du dashboard
-from apps.dashboard_config import UDP_PORT, WEB_PORT
+from core.config_loader import config
 from apps.dashboard_network import (
     receiver_thread, 
     hardware_thread, 
     get_local_ip
 )
+
+# Constantes depuis config unifiée
+UDP_PORT = config.network.udp_port
+WEB_PORT = config.ui.web_port
 from apps.dashboard_ui import (
     build_header,
     build_camera_panel,

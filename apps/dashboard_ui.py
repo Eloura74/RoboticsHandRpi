@@ -16,12 +16,17 @@ import math
 import os
 from nicegui import ui
 
-from apps.dashboard_config import MJPEG_URL, FINGERS, UI_UPDATE_INTERVAL
+from core.config_loader import config
 from apps.dashboard_network import state, state_lock
+
+# Constantes depuis config unifiée
+MJPEG_URL = config.network.mjpeg_url
+FINGERS = config.fingers
+UI_UPDATE_INTERVAL = config.ui.update_interval
+RPI_CAMERA_ENABLED = config.network.rpi_camera_enabled
 
 # Import des modules UI refactorisés
 from apps.ui import build_header, build_telemetry_panel, build_camera_panel, build_rpi_camera_overlay, HUDCard
-from apps.dashboard_config import RPI_CAMERA_ENABLED
 
 # Chemin vers le fichier de config servos
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config', 'servos_v2.json')

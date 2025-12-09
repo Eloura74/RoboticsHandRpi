@@ -1,8 +1,0 @@
-# Raspberry Pi specific dependencies
-# Install these on the Raspberry Pi only
-
-adafruit-circuitpython-servokit==1.3.8
-adafruit-circuitpython-pca9685==3.4.9
-adafruit-circuitpython-motor==3.4.9
-RPi.GPIO==0.7.1
-nicegui==1.4.20

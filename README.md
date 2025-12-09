@@ -1,10 +1,12 @@
-# 🤖 Robotic Hand V2.0 - Parallel Motion System
+# 🤖 Robotic Hand V2.1 - Production Ready System
 
-Système de contrôle de main robotique avec tracking par vision et mouvements parallèles fluides.
+Système de contrôle de main robotique avec tracking par vision, mouvements parallèles fluides, tests automatisés et monitoring.
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Raspberry Pi](https://img.shields.io/badge/Platform-Raspberry%20Pi-red.svg)](https://www.raspberrypi.org/)
+[![Tests](https://img.shields.io/badge/Tests-23%20passed-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/Coverage-60%25-yellow.svg)](tests/)
 
 ## 📋 Table des matières
 
@@ -23,7 +25,14 @@ Système de contrôle de main robotique avec tracking par vision et mouvements p
 
 ## ✨ Caractéristiques
 
-### 🎯 Nouveauté V2.0 : Mouvements Parallèles
+### 🆕 Nouveautés V2.1 : Production Ready
+- **✅ Suite de tests complète** : 23 tests unitaires avec pytest
+- **📊 Monitoring système** : Script de monitoring CPU/RAM/température
+- **🛡️ Gestion d'erreurs robuste** : Exceptions typées + tracebacks
+- **📝 Configuration unifiée** : Un seul `config.yaml` (zéro duplication)
+- **📚 Documentation complète** : README_V2.1.md + CHANGELOG.md
+
+### 🎯 Héritées de V2.0 : Mouvements Parallèles
 - **Plusieurs servos bougent simultanément** → mouvement 74% plus rapide
 - **Tracking fluide et naturel** grâce aux threads
 - Tous les doigts peuvent s'ouvrir/fermer en même temps
@@ -52,19 +61,30 @@ Système de contrôle de main robotique avec tracking par vision et mouvements p
 ## 🏗️ Architecture
 
 ```
-V2.0/
-├── core/
-│   └── hand_controller.py      # Contrôleur principal avec threads parallèles
-├── apps/
-│   ├── neuro_dashboard.py      # Interface web principale
-│   ├── udp_server_v2.py        # Serveur UDP simple (sans GUI)
-│   └── demo_parallel_movements.py  # Démo des mouvements parallèles
+V2.1/
+├── core/                        # 🆕 Package modulaire
+│   ├── __init__.py             # Exports propres
+│   ├── hand_controller.py      # Contrôleur avec gestion d'erreurs robuste
+│   ├── config_loader.py        # Loader de config unifié
+│   └── logger.py               # Système de logging
+├── apps/                        # Applications
+│   ├── neuro_dashboardV2_new.py   # Interface web principale
+│   ├── dashboard_ui.py         # Composants UI
+│   ├── dashboard_network.py    # Threads réseau
+│   └── udp_server_v2.py        # Serveur UDP simple (sans GUI)
+├── tests/                       # 🆕 Tests automatisés
+│   ├── conftest.py             # Fixtures pytest
+│   ├── test_hand_controller.py # Tests HandController (12 tests)
+│   └── test_config_loader.py   # Tests ConfigLoader (11 tests)
+├── tools/                       # Outils
+│   ├── monitor_rpi.py          # 🆕 Monitoring système
+│   └── calibrate_servos.py     # Calibration servos
 ├── config/
 │   └── servos_v2.json          # Configuration des servos
-├── tools/
-│   └── calibrate_servos.py     # Outil de calibration
-├── hand_tracker.py             # Script PC pour tracking (à lancer sur PC)
-└── MOUVEMENTS_FLUIDES.md       # Documentation technique des mouvements
+├── config.yaml                  # 🆕 Configuration unifiée
+├── hand_tracker.py             # Script PC pour tracking (NON MODIFIÉ)
+├── README_V2.1.md              # 🆕 Guide des nouveautés
+└── CHANGELOG.md                # 🆕 Journal des modifications
 ```
 
 ### Communication
@@ -479,15 +499,23 @@ Les contributions sont les bienvenues ! N'hésite pas à :
 
 ## 📝 Changelog
 
+### V2.1 (2024-12) - Production Ready 🚀
+- ✅ **23 tests unitaires** avec pytest (coverage 60%)
+- 🛡️ **Gestion d'erreurs robuste** : Exceptions typées I2C vs bugs
+- 📊 **Script de monitoring** : CPU, RAM, température avec export JSON
+- 📝 **Configuration unifiée** : `dashboard_config.py` → `config.yaml`
+- 📚 **Documentation complète** : README_V2.1.md + CHANGELOG.md
+- 🐛 **Corrections** : Erreurs I2C récupérées gracieusement
+
 ### V2.0 (2024-11)
-- ✨ **Mouvements parallèles** avec threads
+- ✨ **Mouvements parallèles** avec threads (gain 74%)
 - ✨ Interface web NiceGUI cyberpunk
 - ✨ Système de watchdog amélioré
 - ✨ Stabilisation au démarrage
 - 🔧 Refactoring complet du code
 - 📖 Documentation complète
 
-### V1.0
+### V1.0 (2024-10)
 - Version initiale avec mouvements séquentiels
 
 ---
