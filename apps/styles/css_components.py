@@ -709,5 +709,42 @@ CSS_COMPONENTS = '''
         font-family: 'Share Tech Mono', monospace;
         font-weight: bold;
     }
+
+    /* ================================================================
+       HUD TITLE MARKERS - Marqueurs visuels pour titres de panneaux
+       ================================================================ */
+    /* Groupe HUD à gauche du titre */
+    .hud-title-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Petit carré lumineux (node) */
+    .hud-title-node {
+        width: 6px;
+        height: 6px;
+        border: 1px solid rgba(34, 211, 238, 0.9); /* cyan-400 */
+        box-shadow:
+            0 0 4px rgba(34, 211, 238, 0.9),
+            0 0 8px rgba(34, 211, 238, 0.4);
+        background: radial-gradient(circle,
+            rgba(34, 211, 238, 0.9) 0%,
+            rgba(15, 23, 42, 1) 70%);
+    }
+
+    /* Barre horizontale qui part vers le centre */
+    .hud-title-bar {
+        width: 26px;
+        height: 1px;
+        background: linear-gradient(
+            to right,
+            rgba(8, 47, 73, 0.0),
+            rgba(34, 211, 238, 0.9)
+        );
+        box-shadow:
+            0 0 6px rgba(34, 211, 238, 0.7),
+            0 0 12px rgba(34, 211, 238, 0.4);
+    }
 </style>
 '''
