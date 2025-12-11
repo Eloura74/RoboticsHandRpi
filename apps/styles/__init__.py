@@ -16,15 +16,20 @@ Ce fichier réassemble tous les modules et exporte :
 - HAND_3D_JS : Code JavaScript Three.js
 """
 
-from .css_base import CSS_BASE
-from .css_components import CSS_COMPONENTS
 from .html_3d import HAND_3D_STRUCTURE
 from .js_threejs import HAND_3D_JS
 
 # =====================================================================
 # ASSEMBLAGE DU CSS COMPLET
 # =====================================================================
-CSS_STYLE = CSS_BASE + '\n' + CSS_COMPONENTS
+CSS_STYLE = """
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/buttons.css">
+<link rel="stylesheet" href="/assets/css/hud.css">
+<link rel="stylesheet" href="/assets/css/telemetry.css">
+<link rel="stylesheet" href="/assets/css/terminal.css">
+<link rel="stylesheet" href="/assets/css/forms.css">
+"""
 
 # =====================================================================
 # EXPORTS

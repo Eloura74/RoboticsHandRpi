@@ -1,0 +1,64 @@
+/* ================================================================
+   TÉLÉMÉTRIE - Barres de progression servos
+   ================================================================ */
+#telemetry-panel {
+    position: absolute;
+    top: 20%;
+    right: 40px;
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 5;
+    background: rgba(0,0,0,0.3);
+    padding: 20px;
+    border-left: 2px solid rgba(0,243,255,0.2);
+    backdrop-filter: blur(2px);
+}
+
+.telemetry-title {
+    font-family: 'Orbitron';
+    color: rgba(255,255,255,0.7);
+    font-size: 10px;
+    letter-spacing: 2px;
+    border-bottom: 1px solid rgba(0,243,255,0.2);
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+
+.finger-meter {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.finger-info {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Rajdhani';
+    font-size: 14px;
+    color: var(--neon-cyan);
+}
+
+.bar-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    transform: skewX(-20deg);
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    width: 0%;
+    background: repeating-linear-gradient(
+        90deg,
+        var(--neon-cyan),
+        var(--neon-cyan) 4px,
+        transparent 4px,
+        transparent 6px
+    );
+    box-shadow: 0 0 10px var(--neon-cyan);
+    transition: width 0.1s linear;
+}

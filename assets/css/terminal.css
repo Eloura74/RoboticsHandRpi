@@ -1,0 +1,36 @@
+/* ================================================================
+   TERMINAL DE LOGS
+   ================================================================ */
+#terminal-panel {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    width: 350px;
+    height: 150px;
+    background: rgba(0, 5, 10, 0.8);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 10px;
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    z-index: 5;
+}
+
+#terminal-header {
+    position: absolute;
+    top: 0; left: 0; width: 100%;
+    background: rgba(0, 243, 255, 0.1);
+    color: var(--neon-cyan);
+    font-size: 9px;
+    padding: 2px 5px;
+    font-family: 'Orbitron';
+    letter-spacing: 1px;
+}
+
+.log-line { margin: 2px 0; opacity: 0.8; }
+.log-sys { color: #aaa; }
+.log-servo { color: var(--neon-cyan); }
+.log-warn { color: var(--neon-red); text-shadow: 0 0 2px red; }

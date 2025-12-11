@@ -1,0 +1,107 @@
+# ====================================================================
+# CONFIGURATION NEURO-HAND V2.1 - MODE FAIBLE MÉMOIRE
+# ====================================================================
+# Configuration optimisée pour systèmes avec RAM limitée.
+# 
+# Optimisations appliquées :
+# - Intervalle de mise à jour UI augmenté (50ms → 150ms)
+# - Désactivation monitoring système gourmand
+# - Réduction fréquence de polling
+# 
+# UTILISATION :
+#   python apps/neuro_dashboard_enhanced.py --config config_low_memory.yaml
+
+# --------------------------------------------------------------------
+# RÉSEAU
+# --------------------------------------------------------------------
+network:
+  # Configuration PC (hand tracker)
+  pc_ip: "192.168.1.10"
+  mjpeg_port: 8090
+  
+  # Configuration RPi (webcam locale)
+  rpi_ip: "192.168.1.60"
+  rpi_camera_port: 8091
+  rpi_camera_enabled: false  # ⚡ DÉSACTIVÉ pour économiser RAM
+  
+  # Configuration UDP
+  udp_ip: "0.0.0.0"
+  udp_port: 5005
+  
+  # Timeout de déconnexion (augmenté pour réduire vérifications)
+  lost_timeout: 3.0  # ⚡ 2.0 → 3.0
+
+# --------------------------------------------------------------------
+# CONFIGURATION SERVOS
+# --------------------------------------------------------------------
+servos:
+  # Seuils d'hystérésis (inchangés)
+  open_threshold: 0.3
+  close_threshold: 0.7
+  
+  # Seuil anti-flutter pouce (augmenté pour réduire mouvements)
+  thumb_anti_flutter: 0.05  # ⚡ 0.02 → 0.05
+
+# --------------------------------------------------------------------
+# DOIGTS PILOTÉS
+# --------------------------------------------------------------------
+fingers:
+  - pouce_articulation
+  - index
+  - majeur
+  - annulaire_auriculaire
+
+# --------------------------------------------------------------------
+# INTERFACE UTILISATEUR
+# --------------------------------------------------------------------
+ui:
+  # Port du serveur web
+  web_port: 8080
+  
+  # ⚡ Intervalle de mise à jour AUGMENTÉ (économie ~15% RAM)
+  # 0.05s = 20 FPS → 0.15s = 6.7 FPS
+  update_interval: 0.15  # ⚡ OPTIMISÉ (0.05 → 0.15)
+
+# --------------------------------------------------------------------
+# SÉCURITÉ RÉSEAU
+# --------------------------------------------------------------------
+security:
+  # HMAC désactivé pour économiser CPU/RAM
+  enable_hmac: false
+  
+  # ⚡ Rate limiting réduit (économie calculs)
+  rate_limit_requests: 50  # ⚡ 100 → 50
+  rate_limit_window: 1.0
+
+# --------------------------------------------------------------------
+# LOGGING
+# --------------------------------------------------------------------
+logging:
+  # ⚡ Niveau WARNING au lieu de INFO (moins de logs)
+  level: "WARNING"  # ⚡ OPTIMISÉ (INFO → WARNING)
+  
+  # Fichier de sortie
+  file: "logs/neurohand.log"
+  
+  # ⚡ Taille fichiers réduite
+  max_bytes: 5242880  # ⚡ 10 MB → 5 MB
+  backup_count: 3  # ⚡ 5 → 3
+
+# --------------------------------------------------------------------
+# OPTIMISATIONS SUPPLÉMENTAIRES (custom)
+# --------------------------------------------------------------------
+performance:
+  # ⚡ Désactiver monitoring système (économie ~15 MB RAM)
+  enable_system_monitoring: false
+  
+  # ⚡ Désactiver gestes prédéfinis (économie ~5 MB RAM)
+  enable_gesture_presets: false
+  
+  # ⚡ Réduire cache 3D
+  enable_3d_advanced: false
+  
+  # ⚡ Garbage collector agressif
+  gc_aggressive: true
+  
+  # ⚡ Interval nettoyage mémoire (secondes)
+  gc_interval: 30

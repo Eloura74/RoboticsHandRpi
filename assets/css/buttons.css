@@ -1,0 +1,255 @@
+/* ================================================================
+   BOUTONS CYBER
+   ================================================================ */
+.cyber-btn {
+    background: linear-gradient(90deg, transparent 0%, rgba(0, 243, 255, 0.1) 50%, transparent 100%);
+    border: 1px solid rgba(0, 243, 255, 0.4);
+    color: var(--neon-cyan);
+    font-family: 'Orbitron';
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.cyber-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0,243,255,0.4), transparent);
+    transition: 0.5s;
+}
+
+.cyber-btn:hover::before { left: 100%; }
+
+.cyber-btn:hover {
+    border-color: var(--neon-cyan);
+    background: rgba(0, 243, 255, 0.2);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+}
+
+/* ================================================================
+   BOUTONS DANGER
+   ================================================================ */
+.danger-btn {
+    background: rgba(40, 0, 0, 0.5);
+    border: 1px solid var(--neon-red);
+    color: var(--neon-red);
+    font-family: 'Orbitron';
+    box-shadow: inset 0 0 10px rgba(255,0,0,0.1);
+}
+
+.danger-btn:hover {
+    background: rgba(100, 0, 0, 0.6);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+}
+
+/* ================================================================
+   BOUTONS DE CONTRÔLE (NiceGUI)
+   ================================================================ */
+.control-btn {
+    border-radius: 10px !important;
+    border: 1px solid rgba(0, 243, 255, 0.55) !important;
+    background: radial-gradient(circle at 0% 0%, rgba(0,243,255,0.18), rgba(0,0,0,0.95)) !important;
+    box-shadow:
+        0 0 10px rgba(0, 243, 255, 0.25),
+        inset 0 0 10px rgba(0, 243, 255, 0.2);
+    text-align: left;
+}
+
+.control-btn .q-btn__content {
+    justify-content: space-between;
+    width: 100%;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 11px;
+    color: var(--neon-cyan);
+}
+
+.control-btn .q-icon {
+    font-size: 18px;
+    opacity: 0.85;
+}
+
+.control-btn::after {
+    content: '';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    width: 36px;
+    height: 1px;
+    transform: translateY(-50%);
+    background: linear-gradient(90deg, rgba(0,243,255,0.0), rgba(0,243,255,0.8));
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.control-btn:hover {
+    box-shadow:
+        0 0 16px rgba(0,243,255,0.6),
+        inset 0 0 12px rgba(0,243,255,0.25);
+    border-color: rgba(0, 243, 255, 0.9);
+}
+
+.sim-btn {
+    border-radius: 10px !important;
+    border: 1px dashed rgba(0, 243, 255, 0.6) !important;
+    background: radial-gradient(circle at 0% 0%, rgba(0,243,255,0.10), rgba(0,0,0,0.95)) !important;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.sim-btn .q-btn__content {
+    justify-content: center;
+    color: var(--neon-cyan);
+}
+
+.thumb-btn {
+    border-radius: 9999px !important;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ================================================================
+   BOUTON D'URGENCE
+   ================================================================ */
+.emergency-wrapper {
+    margin-top: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 4px;
+}
+
+.emergency-ring {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 120, 40, 0.45);
+    box-shadow:
+        0 0 25px rgba(255, 120, 40, 0.8),
+        0 0 60px rgba(255, 80, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle, rgba(255,140,40,0.1), rgba(0,0,0,0.95));
+}
+
+.emergency-ring::before {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    border: 1px dashed rgba(255, 200, 150, 0.5);
+    opacity: 0.6;
+}
+
+.emergency-btn {
+    border-radius: 9999px !important;
+    width: 90px;
+    height: 90px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: radial-gradient(circle, #ff6600, #7a0000) !important;
+    border: 2px solid rgba(255,230,200,0.9) !important;
+    color: #fff !important;
+    box-shadow:
+        0 0 25px rgba(255, 140, 40, 0.9),
+        inset 0 0 20px rgba(0,0,0,0.7);
+}
+
+.emergency-btn .q-btn__content {
+    flex-direction: column;
+}
+
+.emergency-btn:hover {
+    transform: scale(1.03);
+    box-shadow:
+        0 0 35px rgba(255, 180, 80, 1),
+        inset 0 0 20px rgba(0,0,0,0.8);
+}
+
+.cyber-btn-glitch {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: bold;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.cyber-btn-glitch::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: rotate(45deg) translateY(-100%);
+    transition: transform 0.5s;
+}
+
+.cyber-btn-glitch:hover::after {
+    transform: rotate(45deg) translateY(100%);
+}
+
+.cyber-btn-open {
+    background: rgba(0, 243, 255, 0.1) !important;
+    border: 1px solid rgba(0, 243, 255, 0.5) !important;
+    color: var(--neon-cyan) !important;
+}
+.cyber-btn-open:hover {
+    background: rgba(0, 243, 255, 0.2) !important;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+    text-shadow: 0 0 8px var(--neon-cyan);
+}
+
+.cyber-btn-close {
+    background: rgba(255, 0, 60, 0.1) !important;
+    border: 1px solid rgba(255, 0, 60, 0.5) !important;
+    color: #ff003c !important;
+}
+.cyber-btn-close:hover {
+    background: rgba(255, 0, 60, 0.2) !important;
+    box-shadow: 0 0 15px rgba(255, 0, 60, 0.4);
+    text-shadow: 0 0 8px #ff003c;
+}
+
+.cyber-btn-sim {
+    background: rgba(138, 43, 226, 0.1) !important;
+    border: 1px solid rgba(138, 43, 226, 0.5) !important;
+    color: #8a2be2 !important;
+}
+.cyber-btn-sim:hover {
+    background: rgba(138, 43, 226, 0.2) !important;
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+    text-shadow: 0 0 8px #8a2be2;
+}
+
+.thumb-actuator {
+    background: rgba(0, 20, 30, 0.8);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    color: var(--neon-cyan);
+    transition: all 0.2s;
+}
+.thumb-actuator:hover {
+    background: rgba(0, 243, 255, 0.2);
+    border-color: var(--neon-cyan);
+}
+
+.thumb-display {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 243, 255, 0.1);
+    color: var(--neon-cyan);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+}

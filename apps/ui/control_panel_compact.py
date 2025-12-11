@@ -54,7 +54,7 @@ def build_control_panel_compact(controller, local_ip: str, udp_port: int):
                 # Icône cyberpunk
                 ui.html('<div style="width:3px; height:12px; background:linear-gradient(to bottom, #22d3ee, transparent); box-shadow:0 0 8px #22d3ee;"></div>')
                 ui.label('CONTROLS').classes(
-                    'hud-section-title text-[10px] tracking-[0.25em] uppercase ml-4 mt-2'
+                    'hud-section-title text-[10px] tracking-[0.25em] uppercase'
                 )
             
             # Bloc droite : badge de status
@@ -84,9 +84,9 @@ def build_control_panel_compact(controller, local_ip: str, udp_port: int):
         # ================================================================
         # BOUTONS PRINCIPAUX : Layout optimisé
         # ================================================================
-        with ui.column().classes('w-full gap-2 z-20 mt-2 ml-2 mr-2'):
+        with ui.column().classes('w-full gap-2 z-20 mt-2'):
             # Ligne 1 : OPEN et CLOSE (principaux)
-            with ui.row().classes('w-full gap-2 p-4'):
+            with ui.row().classes('w-full gap-2'):
                 with ui.button(
                     on_click=lambda: controller.open_hand()
                 ).props('flat no-caps dense').classes(
@@ -103,12 +103,12 @@ def build_control_panel_compact(controller, local_ip: str, udp_port: int):
                     'flex-1 h-9 cyber-btn-glitch cyber-btn-close '
                     'border border-red-500/60 hover:border-red-400 '
                     'flex flex-col items-center justify-center gap-0 px-0'
-                ):  
+                ):
                     ui.icon('arrow_downward', size='xs').classes('text-red-400')
                     ui.label('CLOSE').classes('text-[7px] leading-none')
             
             # Ligne 2 : STOP et SIM (secondaires)
-            with ui.row().classes('w-full gap-2 p-4'):
+            with ui.row().classes('w-full gap-2'):
                 with ui.button(
                     on_click=lambda: controller.stop_all()
                 ).props('flat no-caps dense').classes(
