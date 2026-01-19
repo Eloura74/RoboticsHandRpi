@@ -1,3 +1,8 @@
+
+<div align="center">
+  <img src="./RoboticsHandRpi_header.png" alt="Bannière Portfolio Informatique" width="100%">
+</div>
+<br>
 # 🤖 NEURO-HAND V2.1 Enhanced - Main Robotique Intelligente
 
 **Système complet de main robotique contrôlée par vision avec IA, interface web cyberpunk, et mouvements fluides en temps réel.**
